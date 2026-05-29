@@ -600,7 +600,7 @@ a {
 }
 
 .timeline-layout.has-detail {
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) 420px;
 }
 
 .scatter-svg {
@@ -660,8 +660,9 @@ a {
 
 .detail-card img {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.34);
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.16);
 }
@@ -729,7 +730,7 @@ a {
 }
 
 .gallery-layout.has-list {
-  grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.82fr) 390px;
+  grid-template-columns: minmax(0, 1.02fr) minmax(330px, 0.76fr) 460px;
 }
 
 .map-svg {
@@ -826,7 +827,7 @@ a {
 
 .art-list-item {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 92px 1fr;
   gap: 12px;
   margin-bottom: 12px;
   padding: 10px;
@@ -837,7 +838,7 @@ a {
 }
 
 .art-list-item:hover {
-  grid-template-columns: 132px 1fr;
+  grid-template-columns: 170px 1fr;
   border-color: var(--red);
   box-shadow: 0 0 20px rgba(237, 0, 43, 0.32);
   transform: translateX(-4px);
@@ -846,7 +847,8 @@ a {
 .art-list-item img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.34);
   border-radius: 5px;
 }
 

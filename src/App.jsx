@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   classificationCounts,
   departmentCounts,
@@ -15,6 +15,43 @@ const tabs = [
   ['timeline', 'timeline viewer'],
   ['map', 'gallery map'],
 ];
+
+const metImageCache = new Map();
+
+function MetArtworkImage({ artwork, alt = '', className = '' }) {
+  const fallback = artwork.image;
+  const [src, setSrc] = useState(() => metImageCache.get(artwork.id) || fallback);
+
+  useEffect(() => {
+    let cancelled = false;
+    const cached = metImageCache.get(artwork.id);
+
+    if (cached) {
+      setSrc(cached);
+      return undefined;
+    }
+
+    setSrc(fallback);
+    fetch(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${artwork.id}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const image = data?.primaryImageSmall || data?.primaryImage;
+        if (!cancelled && image) {
+          metImageCache.set(artwork.id, image);
+          setSrc(image);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSrc(fallback);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [artwork.id, fallback]);
+
+  return <img className={className} src={src} alt={alt} loading="lazy" />;
+}
 
 function Header({ activeTab, onTabChange }) {
   return (
@@ -200,7 +237,7 @@ function SummaryMapPreview({ onOpenMap }) {
         <span>Open gallery map</span>
       </div>
       <FloorSelector activeFloor={activeFloor} onFloorChange={setActiveFloor} />
-      <FloorOverviewMap activeFloor={activeFloor} selected={null} onSelect={onOpenMap} />
+      <FloorOverviewMap activeFloor={activeFloor} selected={null} onSelect={(sectionId) => onOpenMap(activeFloor, sectionId)} />
     </section>
   );
 }
@@ -287,7 +324,7 @@ function ArtworkDetailCard({ artwork, onClose }) {
   return (
     <aside className="detail-card">
       <button className="close" onClick={onClose}>×</button>
-      <img src={artwork.image} alt="" />
+      <MetArtworkImage artwork={artwork} alt={artwork.title} />
       <h2>{artwork.title}</h2>
       <p className="muted">{artwork.artist}</p>
       <dl>
@@ -328,18 +365,19 @@ function TimelineViewer() {
 
 function FloorOverviewMap({ activeFloor, selected, onSelect }) {
   const visibleSections = floorSections.filter((section) => section.floor === activeFloor);
-  const activePlan = floorPlans.find((plan) => plan.id === activeFloor);
 
   return (
     <svg className="map-svg floor-overview" viewBox="0 0 1240 540">
-      <path className="building-outline" d="M66 386H112V184h48V38h930v150h54v180h-54v134H66Z" />
-      <path className="floor-spine" d="M406 276H452M696 270H724M992 276H1014M574 218V180M574 322V362M858 210V180M858 340V360" />
-      <rect className="great-hall" x="470" y="224" width="208" height="88" rx="4" />
-      <text className="hall-label" x="574" y="269">Great Hall</text>
-      <text className="floor-label" x="1148" y="72">{activePlan?.label}</text>
-      <text className="facade-label" x="574" y="526">Fifth Avenue Entrance</text>
+      <path className="building-outline" d="M98 398H132V196h36V42h908v150h48v180h-48v126H98Z" />
+      <path className="floor-spine" d="M424 278H488M680 258H812M618 300V278M618 384V438M424 132H486M686 234H812M1004 274H1076" />
+      <rect className="great-hall" x="488" y="400" width="260" height="68" rx="4" />
+      <text className="hall-label" x="618" y="435">Great Hall</text>
+      <text className="facade-label" x="618" y="524">Fifth Avenue Entrance / 82nd Street</text>
       {visibleSections.map((section) => (
-        <g key={section.id} onClick={() => onSelect(section.id)} className={selected === section.id ? 'map-room active' : 'map-room'}>
+        <g key={section.id} onClick={(event) => {
+          event.stopPropagation();
+          onSelect(section.id);
+        }} className={selected === section.id ? 'map-room active' : 'map-room'}>
           <rect x={section.x} y={section.y} width={section.w} height={section.h} rx="3" />
           <text x={section.x + section.w / 2} y={section.y + section.h / 2 - 10}>{section.label}</text>
           <text className="room-subtitle" x={section.x + section.w / 2} y={section.y + section.h / 2 + 16}>{section.subtitle}</text>
@@ -374,7 +412,7 @@ function FloorDetailMap({ floor, selectedRoom, onRoomSelect }) {
 function ArtworkListItem({ artwork }) {
   return (
     <article className="art-list-item">
-      <img src={artwork.image} alt="" />
+      <MetArtworkImage artwork={artwork} alt={artwork.title} />
       <div>
         <h3>{artwork.title}</h3>
         <p>{artwork.culture}</p>
@@ -397,10 +435,18 @@ function ArtworkList({ room }) {
   );
 }
 
-function GalleryMap() {
+function GalleryMap({ target }) {
   const [activeFloor, setActiveFloor] = useState('floor-1');
   const [floor, setFloor] = useState(null);
   const [room, setRoom] = useState(null);
+
+  useEffect(() => {
+    if (!target) return;
+    setActiveFloor(target.floorId || 'floor-1');
+    setFloor(target.sectionId || null);
+    setRoom(null);
+  }, [target]);
+
   const chooseMapFloor = (id) => {
     setActiveFloor(id);
     setFloor(null);
@@ -433,12 +479,18 @@ function GalleryMap() {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('summary');
+  const [galleryTarget, setGalleryTarget] = useState(null);
+  const openGalleryMap = (floorId = 'floor-1', sectionId = null) => {
+    setGalleryTarget({ floorId, sectionId, requestedAt: Date.now() });
+    setActiveTab('map');
+  };
+
   return (
     <div className="app-shell">
       <Header activeTab={activeTab} onTabChange={setActiveTab} />
-      {activeTab === 'summary' && <CollectionSummary onOpenMap={() => setActiveTab('map')} />}
+      {activeTab === 'summary' && <CollectionSummary onOpenMap={openGalleryMap} />}
       {activeTab === 'timeline' && <TimelineViewer />}
-      {activeTab === 'map' && <GalleryMap />}
+      {activeTab === 'map' && <GalleryMap target={galleryTarget} />}
     </div>
   );
 }

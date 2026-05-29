@@ -272,7 +272,7 @@ a {
 }
 
 .summary-map-panel .map-room text {
-  font-size: 21px;
+  font-size: 18px;
 }
 
 .summary-overview {
@@ -699,12 +699,47 @@ a {
   stroke-width: 7;
 }
 
+.building-outline {
+  fill: rgba(255, 255, 255, 0.025);
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 3;
+}
+
+.floor-spine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.great-hall {
+  fill: rgba(255, 255, 255, 0.04);
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 2;
+}
+
+.hall-label {
+  fill: #dfe8eb;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.facade-label {
+  fill: #87949a;
+  text-anchor: middle;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 .map-room {
   cursor: pointer;
 }
 
 .map-room rect {
-  fill: rgba(6, 17, 25, 0.88);
+  fill: rgba(6, 17, 25, 0.9);
   stroke: rgba(240, 248, 252, 0.25);
   stroke-width: 2;
   transition: fill 180ms ease, stroke 180ms ease, filter 180ms ease;
@@ -718,6 +753,12 @@ a {
   pointer-events: none;
 }
 
+.map-room .room-subtitle {
+  fill: #a9b4b9;
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .map-room:hover rect,
 .map-room.active rect {
   fill: rgba(237, 0, 43, 0.16);
@@ -726,8 +767,13 @@ a {
 }
 
 .map-svg.detail .map-room text {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 700;
+}
+
+.map-svg.detail .map-room .room-subtitle {
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .art-list {

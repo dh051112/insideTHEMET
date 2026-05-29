@@ -2,9 +2,8 @@ import { useMemo, useState } from 'react';
 import {
   classificationCounts,
   departmentCounts,
-  departmentRooms,
-  departments,
-  endDateBins,
+  floorRooms,
+  floorSections,
   galleryArtworks,
   summaryStats,
   timelineArtworks,
@@ -179,10 +178,10 @@ function SummaryMapPreview({ onOpenMap }) {
   return (
     <section className="summary-map-panel" role="button" tabIndex="0" onClick={onOpenMap} onKeyDown={handleKeyDown}>
       <div className="panel-head">
-        <h2>Museum Department Map</h2>
+        <h2>Met-Inspired Gallery Sections</h2>
         <span>Open gallery map</span>
       </div>
-      <GalleryOverviewMap selected={null} onSelect={onOpenMap} />
+      <FloorOverviewMap selected={null} onSelect={onOpenMap} />
     </section>
   );
 }
@@ -308,33 +307,40 @@ function TimelineViewer() {
   );
 }
 
-function GalleryOverviewMap({ selected, onSelect }) {
+function FloorOverviewMap({ selected, onSelect }) {
   return (
-    <svg className="map-svg" viewBox="0 0 630 330">
-      {departments.map((d) => (
-        <g key={d.id} onClick={() => onSelect(d.id)} className={selected === d.id ? 'map-room active' : 'map-room'}>
-          <rect x={d.x} y={d.y} width={d.w} height={d.h} rx="3" />
-          <text x={d.x + d.w / 2} y={d.y + d.h / 2}>{d.label}</text>
+    <svg className="map-svg floor-overview" viewBox="0 0 1240 540">
+      <path className="building-outline" d="M66 386H112V184h48V38h930v150h54v180h-54v134H66Z" />
+      <path className="floor-spine" d="M406 276H452M696 270H724M992 276H1014M574 218V180M574 322V362M858 210V180M858 340V360" />
+      <rect className="great-hall" x="470" y="224" width="208" height="88" rx="4" />
+      <text className="hall-label" x="574" y="269">Great Hall</text>
+      <text className="facade-label" x="574" y="526">Fifth Avenue Entrance</text>
+      {floorSections.map((section) => (
+        <g key={section.id} onClick={() => onSelect(section.id)} className={selected === section.id ? 'map-room active' : 'map-room'}>
+          <rect x={section.x} y={section.y} width={section.w} height={section.h} rx="3" />
+          <text x={section.x + section.w / 2} y={section.y + section.h / 2 - 10}>{section.label}</text>
+          <text className="room-subtitle" x={section.x + section.w / 2} y={section.y + section.h / 2 + 16}>{section.subtitle}</text>
         </g>
       ))}
-      <path d="M226 86H246M402 86H422M198 226H222M388 226H412" />
     </svg>
   );
 }
 
-function DepartmentDetailMap({ department, selectedRoom, onRoomSelect }) {
-  const rooms = departmentRooms[department] || departmentRooms.egyptian;
+function FloorDetailMap({ floor, selectedRoom, onRoomSelect }) {
+  const rooms = floorRooms[floor] || [];
   return (
-    <svg className="map-svg detail" viewBox="0 0 420 330">
+    <svg className="map-svg detail" viewBox="0 0 650 460">
       {rooms.map((room, i) => {
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        const x = 28 + col * 128;
+        const col = i % 4;
+        const row = Math.floor(i / 4);
+        const x = 32 + col * 150;
         const y = 34 + row * 88;
+        const count = galleryArtworks[room]?.length || 0;
         return (
           <g key={room} onClick={() => onRoomSelect(room)} className={selectedRoom === room ? 'map-room active' : 'map-room'}>
-            <rect x={x} y={y} width="104" height="66" rx="3" />
-            <text x={x + 52} y={y + 38}>{room}</text>
+            <rect x={x} y={y} width="122" height="66" rx="3" />
+            <text x={x + 61} y={y + 31}>{room}</text>
+            <text className="room-subtitle" x={x + 61} y={y + 50}>{count} works</text>
           </g>
         );
       })}
@@ -369,20 +375,22 @@ function ArtworkList({ room }) {
 }
 
 function GalleryMap() {
-  const [department, setDepartment] = useState(null);
+  const [floor, setFloor] = useState(null);
   const [room, setRoom] = useState(null);
-  const chooseDepartment = (id) => {
-    setDepartment(id);
+  const chooseFloor = (id) => {
+    setFloor(id);
     setRoom(null);
   };
+  const selectedFloor = floorSections.find((section) => section.id === floor);
+
   return (
     <main className="dashboard">
-      <PageTitle title="Gallery Map" subtitle="Explore how collections are arranged across museum galleries." />
-      <section className={['gallery-layout', department ? 'has-rooms' : '', room ? 'has-list' : ''].filter(Boolean).join(' ')}>
-        <ChartPanel title="Museum Departments"><GalleryOverviewMap selected={department} onSelect={chooseDepartment} /></ChartPanel>
-        {department && (
-          <ChartPanel title={`${departments.find((d) => d.id === department)?.label} Rooms`}>
-            <DepartmentDetailMap department={department} selectedRoom={room} onRoomSelect={setRoom} />
+      <PageTitle title="Gallery Map" subtitle="Explore a Met-inspired floor plan schematic, then inspect CSV gallery rooms and artworks." />
+      <section className={['gallery-layout', floor ? 'has-rooms' : '', room ? 'has-list' : ''].filter(Boolean).join(' ')}>
+        <ChartPanel title="Met-Inspired Gallery Sections"><FloorOverviewMap selected={floor} onSelect={chooseFloor} /></ChartPanel>
+        {floor && (
+          <ChartPanel title={`${selectedFloor?.label} Rooms`}>
+            <FloorDetailMap floor={floor} selectedRoom={room} onRoomSelect={setRoom} />
           </ChartPanel>
         )}
         {room && <ArtworkList room={room} />}

@@ -172,10 +172,139 @@ const worksByRoom = timelineArtworks.reduce((acc, work) => {
   return acc;
 }, {});
 
+export const floorSections = [
+  {
+    id: 'great-hall-axis',
+    label: 'Great Hall Axis',
+    subtitle: 'Entry and central circulation',
+    departments: ['Medieval Art', 'The Cloisters'],
+    prefixes: ['0'],
+    x: 452,
+    y: 218,
+    w: 244,
+    h: 104,
+  },
+  {
+    id: 'egyptian-wing',
+    label: 'Egyptian Art',
+    subtitle: 'Temple-side east wing',
+    departments: ['Egyptian Art'],
+    prefixes: ['1'],
+    x: 724,
+    y: 210,
+    w: 268,
+    h: 130,
+  },
+  {
+    id: 'greek-roman',
+    label: 'Greek and Roman',
+    subtitle: 'Classical galleries',
+    departments: ['Greek and Roman Art'],
+    prefixes: ['1'],
+    x: 720,
+    y: 360,
+    w: 238,
+    h: 112,
+  },
+  {
+    id: 'american-wing',
+    label: 'American Wing',
+    subtitle: 'West-side period rooms',
+    departments: ['The American Wing'],
+    prefixes: ['7'],
+    x: 114,
+    y: 188,
+    w: 292,
+    h: 190,
+  },
+  {
+    id: 'asian-art',
+    label: 'Asian Art',
+    subtitle: 'North galleries',
+    departments: ['Asian Art'],
+    prefixes: ['2'],
+    x: 466,
+    y: 58,
+    w: 242,
+    h: 122,
+  },
+  {
+    id: 'european-paintings',
+    label: 'European Paintings',
+    subtitle: 'Upper painting galleries',
+    departments: ['European Paintings', 'Robert Lehman Collection'],
+    prefixes: ['8', '9'],
+    x: 742,
+    y: 58,
+    w: 284,
+    h: 122,
+  },
+  {
+    id: 'decorative-arts',
+    label: 'European Decorative Arts',
+    subtitle: 'Sculpture and interiors',
+    departments: ['European Sculpture and Decorative Arts'],
+    prefixes: ['5'],
+    x: 172,
+    y: 58,
+    w: 248,
+    h: 122,
+  },
+  {
+    id: 'arms-medieval',
+    label: 'Arms / Medieval',
+    subtitle: 'Armor court and medieval rooms',
+    departments: ['Arms and Armor', 'Medieval Art'],
+    prefixes: ['3'],
+    x: 382,
+    y: 362,
+    w: 260,
+    h: 110,
+  },
+  {
+    id: 'islamic-art',
+    label: 'Islamic Art',
+    subtitle: 'Court-side galleries',
+    departments: ['Islamic Art'],
+    prefixes: ['4'],
+    x: 1014,
+    y: 216,
+    w: 178,
+    h: 118,
+  },
+  {
+    id: 'instruments-aoa',
+    label: 'Instruments / AOA',
+    subtitle: 'Music and global collections',
+    departments: ['Musical Instruments', 'Arts of Africa, Oceania, and the Americas'],
+    prefixes: ['6'],
+    x: 82,
+    y: 402,
+    w: 248,
+    h: 92,
+  },
+];
+
+const roomSort = (a, b) => {
+  const countDelta = (worksByRoom[b]?.length || 0) - (worksByRoom[a]?.length || 0);
+  if (countDelta) return countDelta;
+  return a.localeCompare(b, undefined, { numeric: true });
+};
+
+export const floorRooms = Object.fromEntries(
+  floorSections.map((section) => [
+    section.id,
+    Object.keys(worksByRoom)
+      .filter((room) => {
+        const works = worksByRoom[room] || [];
+        return works.some((work) => section.departments.includes(work.department))
+          || section.prefixes.some((prefix) => room.startsWith(prefix));
+      })
+      .sort(roomSort)
+      .slice(0, 18),
+  ]),
+);
+
 export const galleryArtworks = Object.fromEntries(
-  Object.entries(departmentRooms).flatMap(([departmentId, rooms]) => {
-    const department = departments.find((item) => item.id === departmentId);
-    const fallback = timelineArtworks.filter((work) => department?.match.includes(work.department)).slice(0, 6);
-    return rooms.map((room) => [room, (worksByRoom[room] || fallback).slice(0, 8)]);
-  }),
+  Object.entries(worksByRoom).map(([room, works]) => [room, works.slice(0, 10)]),
 );

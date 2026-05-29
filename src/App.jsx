@@ -17,6 +17,7 @@ const tabs = [
   ['map', 'gallery map'],
 ];
 
+const categoryPalette = ['#ef0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a', '#b68cff', '#ff8a4c', '#58a6ff', '#d7ff5f', '#ff5f9f', '#55d6be', '#dca85d'];
 const metImageCache = new Map();
 
 function MetArtworkImage({ artwork, alt = '', className = '' }) {
@@ -367,25 +368,23 @@ function RangeSlider({ range, setRange }) {
 
 function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const [minYear, maxYear] = range;
-  const categoryCounts = works.reduce((acc, work) => {
-    const category = work[groupBy] || 'Unknown';
-    acc.set(category, (acc.get(category) || 0) + 1);
-    return acc;
-  }, new Map());
-  const topCategories = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 9).map(([name]) => name);
-  const hasOther = works.some((work) => !topCategories.includes(work[groupBy] || 'Unknown'));
-  const categories = hasOther ? topCategories.concat('Other') : topCategories;
-  const plot = { left: 190, right: 1760, top: 34, bottom: 458 };
+  const categories = [...new Set(works.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
+  const rowGap = groupBy === 'culture' ? 34 : 42;
+  const svgHeight = Math.max(530, 112 + Math.max(1, categories.length - 1) * rowGap);
+  const plot = { left: 230, right: 1760, top: 34, bottom: svgHeight - 72 };
   const plotWidth = plot.right - plot.left;
   const plotHeight = plot.bottom - plot.top;
   const plotCategory = (work) => {
-    const category = work[groupBy] || 'Unknown';
-    return categories.includes(category) ? category : 'Other';
+    return work[groupBy] || 'Unknown';
   };
   const ticks = Array.from({ length: 8 }, (_, i) => Math.round(minYear + ((maxYear - minYear) / 7) * i));
   const x = (year) => plot.left + ((year - minYear) / (maxYear - minYear)) * plotWidth;
   const y = (cat) => plot.top + categories.indexOf(cat) * (plotHeight / Math.max(1, categories.length - 1));
   const formatYear = (year) => (year < 0 ? `${Math.abs(year)}` : `${year}`);
+  const categoryColor = (category) => {
+    const hash = category.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return categoryPalette[hash % categoryPalette.length];
+  };
   const groupPositions = works.reduce((acc, work) => {
     const key = `${Math.round(work.year / 25) * 25}-${plotCategory(work)}`;
     if (!acc.has(key)) acc.set(key, []);
@@ -408,13 +407,13 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
   return (
-    <svg className="scatter-svg" viewBox="0 0 1800 530">
+    <svg className="scatter-svg" style={{ '--scatter-height': `${svgHeight}px` }} viewBox={`0 0 1800 ${svgHeight}`}>
       {ticks.map((tick) => {
         const gx = x(tick);
-        return <g key={tick}><line x1={gx} x2={gx} y1={plot.top} y2={plot.bottom} /><text x={gx} y="496">{formatYear(tick)}</text></g>;
+        return <g key={tick}><line x1={gx} x2={gx} y1={plot.top} y2={plot.bottom} /><text x={gx} y={svgHeight - 34}>{formatYear(tick)}</text></g>;
       })}
-      {categories.map((cat) => <g key={cat}><line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} /><text x="174" y={y(cat) + 4}>{cat}</text></g>)}
-      <text className="axis-title" x="975" y="524">Object End Date</text>
+      {categories.map((cat) => <g key={cat}><line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} /><text x="214" y={y(cat) + 4}>{cat}</text></g>)}
+      <text className="axis-title" x="995" y={svgHeight - 8}>Object End Date</text>
       {works.map((work, i) => {
         const offset = jitter(work);
         const cx = clamp(x(work.year) + offset.x, plot.left, plot.right);
@@ -425,7 +424,7 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
           <g key={work.id} className="point-wrap">
             {isSelected && <circle className="point-ring" cx={cx} cy={cy} r="17" />}
             <circle className={isSelected ? 'point selected' : 'point'} cx={cx} cy={cy}
-              r={isSelected ? 8 : 5.5} fill={['#ff0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a'][i % 5]}
+              r={isSelected ? 8 : 5.5} fill={categoryColor(plotCategory(work))}
               onMouseEnter={() => onHover(work)} onFocus={() => onHover(work)} tabIndex="0" />
           </g>
         );

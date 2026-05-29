@@ -681,9 +681,14 @@ a {
   grid-template-columns: minmax(0, 1fr) 420px;
 }
 
+.timeline-layout .chart-panel {
+  overflow: auto;
+}
+
 .scatter-svg {
   width: 100%;
-  height: clamp(560px, calc(100vh - 260px), 780px);
+  height: max(clamp(560px, calc(100vh - 260px), 780px), var(--scatter-height));
+  min-width: 1000px;
 }
 
 .scatter-svg text {
@@ -699,6 +704,7 @@ a {
   cursor: pointer;
   stroke: rgba(255, 255, 255, 0.6);
   stroke-width: 1;
+  opacity: 0.58;
   filter: drop-shadow(0 0 8px currentColor);
   transition: r 180ms ease, opacity 180ms ease;
 }
@@ -713,6 +719,7 @@ a {
 
 .point:hover,
 .point.selected {
+  opacity: 1;
   stroke: white;
   stroke-width: 2.5;
   filter: drop-shadow(0 0 20px var(--red));

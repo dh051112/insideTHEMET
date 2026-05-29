@@ -302,6 +302,26 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const x = (year) => plot.left + ((year - minYear) / (maxYear - minYear)) * plotWidth;
   const y = (cat) => plot.top + categories.indexOf(cat) * (plotHeight / Math.max(1, categories.length - 1));
   const formatYear = (year) => (year < 0 ? `${Math.abs(year)}` : `${year}`);
+  const groupPositions = works.reduce((acc, work) => {
+    const key = `${Math.round(work.year / 25) * 25}-${plotCategory(work)}`;
+    if (!acc.has(key)) acc.set(key, []);
+    acc.get(key).push(work.id);
+    return acc;
+  }, new Map());
+  const jitter = (work) => {
+    const key = `${Math.round(work.year / 25) * 25}-${plotCategory(work)}`;
+    const group = groupPositions.get(key) || [work.id];
+    const index = group.indexOf(work.id);
+    const ring = Math.floor(index / 8);
+    const angle = ((index % 8) / 8) * Math.PI * 2 + ring * 0.42;
+    const radius = Math.min(34, 12 + ring * 8);
+
+    return {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius * 0.58,
+    };
+  };
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
   return (
     <svg className="scatter-svg" viewBox="0 0 1800 530">
@@ -311,11 +331,17 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
       })}
       {categories.map((cat) => <g key={cat}><line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} /><text x="174" y={y(cat) + 4}>{cat}</text></g>)}
       <text className="axis-title" x="975" y="524">Object End Date</text>
-      {works.map((work, i) => (
-        <circle key={work.id} className={selected?.id === work.id ? 'point selected' : 'point'} cx={x(work.year)} cy={y(plotCategory(work))}
-          r={selected?.id === work.id ? 8 : 5.5} fill={['#ff0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a'][i % 5]}
-          onMouseEnter={() => onHover(work)} onFocus={() => onHover(work)} tabIndex="0" />
-      ))}
+      {works.map((work, i) => {
+        const offset = jitter(work);
+        const cx = clamp(x(work.year) + offset.x, plot.left, plot.right);
+        const cy = clamp(y(plotCategory(work)) + offset.y, plot.top, plot.bottom);
+
+        return (
+          <circle key={work.id} className={selected?.id === work.id ? 'point selected' : 'point'} cx={cx} cy={cy}
+            r={selected?.id === work.id ? 8 : 5.5} fill={['#ff0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a'][i % 5]}
+            onMouseEnter={() => onHover(work)} onFocus={() => onHover(work)} tabIndex="0" />
+        );
+      })}
     </svg>
   );
 }

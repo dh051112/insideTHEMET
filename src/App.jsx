@@ -153,20 +153,56 @@ function Histogram({ data }) {
   );
 }
 
-function CollectionSummary() {
+function MiniDepartmentBars() {
+  const max = Math.max(...departmentCounts.slice(0, 5).map((d) => d[1]));
+  return (
+    <div className="mini-bars">
+      {departmentCounts.slice(0, 5).map(([label, value]) => (
+        <div className="mini-bar-row" key={label}>
+          <span>{label}</span>
+          <div><i style={{ width: `${(value / max) * 100}%` }} /></div>
+          <em>{value}</em>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SummaryMapPreview({ onOpenMap }) {
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpenMap();
+    }
+  };
+
+  return (
+    <section className="summary-map-panel" role="button" tabIndex="0" onClick={onOpenMap} onKeyDown={handleKeyDown}>
+      <div className="panel-head">
+        <h2>Museum Department Map</h2>
+        <span>Open gallery map</span>
+      </div>
+      <GalleryOverviewMap selected={null} onSelect={onOpenMap} />
+    </section>
+  );
+}
+
+function CollectionSummary({ onOpenMap }) {
   return (
     <main className="dashboard">
       <PageTitle title="Collection Overview of Highlighted Public Domain Works" subtitle="Explore The Met collection through key metrics, time periods, and classifications." />
-      <section className="metric-grid">
-        <MetricCard icon="▧" value={summaryStats.totalArtworks} label="Total Artworks" note="Works included in this collection overview" />
-        <MetricCard icon="▥" value={summaryStats.publicDomainWorks} label="Public Domain Works" note="All works in this view are public domain" />
-        <MetricCard icon="▦" value={summaryStats.departments} label="Departments" note="Across curatorial areas" />
-        <MetricCard icon="◇" value={summaryStats.classifications} label="Classification Groups" note="Object category groups" />
-      </section>
-      <section className="summary-panels">
-        <ChartPanel title="Highlighted Works by Department"><BarChart data={departmentCounts} /></ChartPanel>
-        <ChartPanel title="Works by Classification Group" footer={<><span>Total</span><span>1,013</span></>}><DonutChart data={classificationCounts} /></ChartPanel>
-        <ChartPanel title="Distribution by Object End Date"><Histogram data={endDateBins} /></ChartPanel>
+      <section className="summary-redesign">
+        <SummaryMapPreview onOpenMap={onOpenMap} />
+        <aside className="summary-overview">
+          <div className="overview-metrics">
+            <MetricCard icon="▧" value={summaryStats.totalArtworks} label="Total Artworks" note="Highlighted works in this dataset" />
+            <MetricCard icon="▥" value={summaryStats.publicDomainWorks} label="Public Domain Works" note="Ready for public collection viewing" />
+            <MetricCard icon="▦" value={summaryStats.departments} label="Departments" note="Curatorial areas represented" />
+            <MetricCard icon="◇" value={summaryStats.classifications} label="Classification Groups" note="Object category groups" />
+          </div>
+          <ChartPanel title="Top Departments"><MiniDepartmentBars /></ChartPanel>
+          <ChartPanel title="Classification Mix" footer={<><span>Total</span><span>{summaryStats.totalArtworks.toLocaleString()}</span></>}><DonutChart data={classificationCounts} /></ChartPanel>
+        </aside>
       </section>
     </main>
   );
@@ -360,7 +396,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <Header activeTab={activeTab} onTabChange={setActiveTab} />
-      {activeTab === 'summary' && <CollectionSummary />}
+      {activeTab === 'summary' && <CollectionSummary onOpenMap={() => setActiveTab('map')} />}
       {activeTab === 'timeline' && <TimelineViewer />}
       {activeTab === 'map' && <GalleryMap />}
     </div>

@@ -233,6 +233,135 @@ a {
   margin-top: 20px;
 }
 
+.summary-redesign {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 430px;
+  gap: 16px;
+  min-height: calc(100vh - 190px);
+  align-items: stretch;
+}
+
+.summary-map-panel {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(7, 20, 29, 0.92), rgba(6, 14, 21, 0.88)),
+    radial-gradient(circle at 50% 50%, rgba(237, 0, 43, 0.12), transparent 48%);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: inset 0 0 60px rgba(61, 111, 139, 0.1);
+  overflow: hidden;
+}
+
+.summary-map-panel:hover {
+  border-color: var(--red);
+  box-shadow: 0 0 28px rgba(237, 0, 43, 0.22), inset 0 0 60px rgba(61, 111, 139, 0.12);
+}
+
+.summary-map-panel .map-svg {
+  height: clamp(560px, calc(100vh - 270px), 820px);
+}
+
+.summary-map-panel .map-room rect {
+  stroke-width: 2.4;
+}
+
+.summary-map-panel .map-room text {
+  font-size: 21px;
+}
+
+.summary-overview {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 12px;
+  padding: 0;
+}
+
+.overview-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.overview-metrics .metric-card {
+  min-height: 94px;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.overview-metrics .metric-icon {
+  width: 30px;
+  font-size: 30px;
+}
+
+.overview-metrics .metric-card strong {
+  font-size: 25px;
+}
+
+.overview-metrics .metric-card h3 {
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.overview-metrics .metric-card p {
+  font-size: 11px;
+}
+
+.summary-overview .chart-panel {
+  min-height: 0;
+  padding: 16px;
+}
+
+.summary-overview .donut-wrap {
+  grid-template-columns: 0.9fr 1fr;
+  min-height: 210px;
+}
+
+.summary-overview .donut {
+  max-height: 210px;
+}
+
+.mini-bars {
+  display: grid;
+  gap: 12px;
+  padding: 10px 2px 0;
+}
+
+.mini-bar-row {
+  display: grid;
+  grid-template-columns: 138px 1fr 36px;
+  align-items: center;
+  gap: 12px;
+  color: #dce4e7;
+  font-size: 12px;
+}
+
+.mini-bar-row div {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.mini-bar-row i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--red);
+  box-shadow: 0 0 12px var(--red-glow);
+}
+
+.mini-bar-row em {
+  color: var(--muted);
+  font-style: normal;
+  text-align: right;
+}
+
 .chart-panel,
 .art-list {
   min-height: clamp(390px, calc(100vh - 360px), 620px);
@@ -663,6 +792,7 @@ a {
   .met-nav,
   .metric-grid,
   .summary-panels,
+  .summary-redesign,
   .timeline-layout,
   .timeline-layout.has-detail,
   .gallery-layout,
@@ -670,6 +800,10 @@ a {
   .gallery-layout.has-list,
   .timeline-controls {
     grid-template-columns: 1fr;
+  }
+
+  .summary-overview {
+    grid-template-rows: auto;
   }
 
   .met-nav {

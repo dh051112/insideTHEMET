@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   classificationCounts,
   departmentCounts,
@@ -6,6 +6,7 @@ import {
   floorRooms,
   floorSections,
   galleryArtworks,
+  sectionByRoom,
   summaryStats,
   timelineArtworks,
 } from './mockData.js';
@@ -53,7 +54,71 @@ function MetArtworkImage({ artwork, alt = '', className = '' }) {
   return <img className={className} src={src} alt={alt} loading="lazy" />;
 }
 
-function Header({ activeTab, onTabChange }) {
+function SearchPopover({ query, results, onQueryChange, onClose, onJumpTimeline, onJumpMap }) {
+  return (
+    <div className="search-popover">
+      {query.trim() ? (
+        <>
+          <div className="search-summary">{results.length ? `${results.length} matching artworks` : 'No matching artworks'}</div>
+          {results.map((artwork) => (
+            <article className="search-result" key={artwork.id}>
+              <MetArtworkImage artwork={artwork} alt={artwork.title} />
+              <div>
+                <h3>{artwork.title}</h3>
+                <p>{artwork.artist}</p>
+                <span>{artwork.department} · {artwork.date}</span>
+                <div className="result-actions">
+                  <button onClick={() => {
+                    onJumpTimeline(artwork);
+                    onClose();
+                  }}>Timeline</button>
+                  <button onClick={() => {
+                    onJumpMap(artwork);
+                    onClose();
+                  }}>Map</button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </>
+      ) : (
+        <div className="search-summary">Search by title, artist, culture, department, medium, or accession number.</div>
+      )}
+    </div>
+  );
+}
+
+function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap }) {
+  const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef(null);
+  const results = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return [];
+    return timelineArtworks
+      .filter((artwork) => [
+        artwork.title,
+        artwork.artist,
+        artwork.department,
+        artwork.classification,
+        artwork.culture,
+        artwork.medium,
+        artwork.accession,
+      ].join(' ').toLowerCase().includes(term))
+      .slice(0, 8);
+  }, [query]);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, []);
+
   return (
     <header className="site-header">
       <nav className="met-nav">
@@ -67,9 +132,28 @@ function Header({ activeTab, onTabChange }) {
             </button>
           ))}
         </div>
-        <label className="search-box">
-          <input placeholder="Search artworks, artists..." />
+        <label
+          className="search-box"
+          ref={searchRef}
+          onMouseEnter={() => setSearchOpen(true)}
+        >
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onFocus={() => setSearchOpen(true)}
+            placeholder="Search artworks, artists..."
+          />
           <span>⌕</span>
+          {searchOpen && (
+            <SearchPopover
+              query={query}
+              results={results}
+              onQueryChange={setQuery}
+              onClose={() => setSearchOpen(false)}
+              onJumpTimeline={onJumpTimeline}
+              onJumpMap={onJumpMap}
+            />
+          )}
         </label>
       </nav>
     </header>
@@ -335,11 +419,15 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
         const offset = jitter(work);
         const cx = clamp(x(work.year) + offset.x, plot.left, plot.right);
         const cy = clamp(y(plotCategory(work)) + offset.y, plot.top, plot.bottom);
+        const isSelected = selected?.id === work.id;
 
         return (
-          <circle key={work.id} className={selected?.id === work.id ? 'point selected' : 'point'} cx={cx} cy={cy}
-            r={selected?.id === work.id ? 8 : 5.5} fill={['#ff0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a'][i % 5]}
-            onMouseEnter={() => onHover(work)} onFocus={() => onHover(work)} tabIndex="0" />
+          <g key={work.id} className="point-wrap">
+            {isSelected && <circle className="point-ring" cx={cx} cy={cy} r="17" />}
+            <circle className={isSelected ? 'point selected' : 'point'} cx={cx} cy={cy}
+              r={isSelected ? 8 : 5.5} fill={['#ff0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a'][i % 5]}
+              onMouseEnter={() => onHover(work)} onFocus={() => onHover(work)} tabIndex="0" />
+          </g>
         );
       })}
     </svg>
@@ -363,10 +451,19 @@ function ArtworkDetailCard({ artwork, onClose }) {
   );
 }
 
-function TimelineViewer() {
+function TimelineViewer({ target }) {
   const [range, setRange] = useState([-5000, 2000]);
   const [groupBy, setGroupBy] = useState('department');
   const [hovered, setHovered] = useState(null);
+
+  useEffect(() => {
+    if (!target) return;
+    const padding = Math.max(150, Math.round(Math.abs(target.year) * 0.08));
+    setRange([Math.max(-5000, target.year - padding), Math.min(2000, target.year + padding)]);
+    setGroupBy('department');
+    setHovered(target);
+  }, [target]);
+
   const filtered = useMemo(() => timelineArtworks.filter((work) => work.year >= range[0] && work.year <= range[1]), [range]);
   const activeHover = hovered && filtered.some((work) => work.id === hovered.id) ? hovered : null;
 
@@ -414,7 +511,10 @@ function FloorOverviewMap({ activeFloor, selected, onSelect }) {
 }
 
 function FloorDetailMap({ floor, selectedRoom, onRoomSelect }) {
-  const rooms = floorRooms[floor] || [];
+  const baseRooms = floorRooms[floor] || [];
+  const rooms = selectedRoom && !baseRooms.includes(selectedRoom)
+    ? [selectedRoom, ...baseRooms]
+    : baseRooms;
   return (
     <svg className="map-svg detail" viewBox="0 0 650 460">
       {rooms.map((room, i) => {
@@ -435,9 +535,9 @@ function FloorDetailMap({ floor, selectedRoom, onRoomSelect }) {
   );
 }
 
-function ArtworkListItem({ artwork }) {
+function ArtworkListItem({ artwork, selected }) {
   return (
-    <article className="art-list-item">
+    <article className={selected ? 'art-list-item selected' : 'art-list-item'}>
       <MetArtworkImage artwork={artwork} alt={artwork.title} />
       <div>
         <h3>{artwork.title}</h3>
@@ -451,12 +551,12 @@ function ArtworkListItem({ artwork }) {
   );
 }
 
-function ArtworkList({ room }) {
+function ArtworkList({ room, selectedArtworkId }) {
   const works = galleryArtworks[room] || timelineArtworks.slice(0, 4);
   return (
     <section className="art-list">
       <div className="panel-head"><h2>Room {room}</h2><span>{works.length} works</span></div>
-      {works.map((work) => <ArtworkListItem key={work.id} artwork={work} />)}
+      {works.map((work) => <ArtworkListItem key={work.id} artwork={work} selected={work.id === selectedArtworkId} />)}
     </section>
   );
 }
@@ -465,22 +565,26 @@ function GalleryMap({ target }) {
   const [activeFloor, setActiveFloor] = useState('floor-1');
   const [floor, setFloor] = useState(null);
   const [room, setRoom] = useState(null);
+  const [selectedArtworkId, setSelectedArtworkId] = useState(null);
 
   useEffect(() => {
     if (!target) return;
     setActiveFloor(target.floorId || 'floor-1');
     setFloor(target.sectionId || null);
-    setRoom(null);
+    setRoom(target.room || null);
+    setSelectedArtworkId(target.artworkId || null);
   }, [target]);
 
   const chooseMapFloor = (id) => {
     setActiveFloor(id);
     setFloor(null);
     setRoom(null);
+    setSelectedArtworkId(null);
   };
   const chooseFloor = (id) => {
     setFloor(id);
     setRoom(null);
+    setSelectedArtworkId(null);
   };
   const selectedFloor = floorSections.find((section) => section.id === floor);
 
@@ -494,10 +598,13 @@ function GalleryMap({ target }) {
         </ChartPanel>
         {floor && (
           <ChartPanel title={`${selectedFloor?.label} Rooms`}>
-            <FloorDetailMap floor={floor} selectedRoom={room} onRoomSelect={setRoom} />
+            <FloorDetailMap floor={floor} selectedRoom={room} onRoomSelect={(nextRoom) => {
+              setRoom(nextRoom);
+              setSelectedArtworkId(null);
+            }} />
           </ChartPanel>
         )}
-        {room && <ArtworkList room={room} />}
+        {room && <ArtworkList room={room} selectedArtworkId={selectedArtworkId} />}
       </section>
     </main>
   );
@@ -506,16 +613,32 @@ function GalleryMap({ target }) {
 export default function App() {
   const [activeTab, setActiveTab] = useState('summary');
   const [galleryTarget, setGalleryTarget] = useState(null);
+  const [timelineTarget, setTimelineTarget] = useState(null);
   const openGalleryMap = (floorId = 'floor-1', sectionId = null) => {
     setGalleryTarget({ floorId, sectionId, requestedAt: Date.now() });
+    setActiveTab('map');
+  };
+  const jumpToTimeline = (artwork) => {
+    setTimelineTarget({ ...artwork, requestedAt: Date.now() });
+    setActiveTab('timeline');
+  };
+  const jumpToMap = (artwork) => {
+    const location = sectionByRoom[artwork.galleryNumber] || {};
+    setGalleryTarget({
+      floorId: location.floorId || 'floor-1',
+      sectionId: location.sectionId || null,
+      room: artwork.galleryNumber || null,
+      artworkId: artwork.id,
+      requestedAt: Date.now(),
+    });
     setActiveTab('map');
   };
 
   return (
     <div className="app-shell">
-      <Header activeTab={activeTab} onTabChange={setActiveTab} />
+      <Header activeTab={activeTab} onTabChange={setActiveTab} onJumpTimeline={jumpToTimeline} onJumpMap={jumpToMap} />
       {activeTab === 'summary' && <CollectionSummary onOpenMap={openGalleryMap} />}
-      {activeTab === 'timeline' && <TimelineViewer />}
+      {activeTab === 'timeline' && <TimelineViewer target={timelineTarget} />}
       {activeTab === 'map' && <GalleryMap target={galleryTarget} />}
     </div>
   );

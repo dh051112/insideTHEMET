@@ -317,10 +317,21 @@ export const floorRooms = Object.fromEntries(
           || section.prefixes.some((prefix) => room.startsWith(prefix));
       })
       .sort(roomSort)
-      .slice(0, 18),
+      .slice(0, 32),
   ]),
 );
 
 export const galleryArtworks = Object.fromEntries(
   Object.entries(worksByRoom).map(([room, works]) => [room, works.slice(0, 10)]),
+);
+
+export const sectionByRoom = Object.fromEntries(
+  Object.keys(worksByRoom).map((room) => {
+    const section = floorSections.find((item) => {
+      const works = worksByRoom[room] || [];
+      return works.some((work) => item.departments.includes(work.department))
+        || item.prefixes.some((prefix) => room.startsWith(prefix));
+    });
+    return [room, { sectionId: section?.id || null, floorId: section?.floor || 'floor-1' }];
+  }),
 );

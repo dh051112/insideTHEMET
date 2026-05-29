@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   classificationCounts,
   departmentCounts,
@@ -200,23 +200,26 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const topCategories = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 9).map(([name]) => name);
   const hasOther = works.some((work) => !topCategories.includes(work[groupBy] || 'Unknown'));
   const categories = hasOther ? topCategories.concat('Other') : topCategories;
+  const plot = { left: 190, right: 1760, top: 34, bottom: 458 };
+  const plotWidth = plot.right - plot.left;
+  const plotHeight = plot.bottom - plot.top;
   const plotCategory = (work) => {
     const category = work[groupBy] || 'Unknown';
     return categories.includes(category) ? category : 'Other';
   };
   const ticks = Array.from({ length: 8 }, (_, i) => Math.round(minYear + ((maxYear - minYear) / 7) * i));
-  const x = (year) => 82 + ((year - minYear) / (maxYear - minYear)) * 760;
-  const y = (cat) => 52 + categories.indexOf(cat) * (330 / Math.max(1, categories.length - 1));
+  const x = (year) => plot.left + ((year - minYear) / (maxYear - minYear)) * plotWidth;
+  const y = (cat) => plot.top + categories.indexOf(cat) * (plotHeight / Math.max(1, categories.length - 1));
   const formatYear = (year) => (year < 0 ? `${Math.abs(year)}` : `${year}`);
 
   return (
-    <svg className="scatter-svg" viewBox="0 0 900 460">
+    <svg className="scatter-svg" viewBox="0 0 1800 530">
       {ticks.map((tick) => {
         const gx = x(tick);
-        return <g key={tick}><line x1={gx} x2={gx} y1="34" y2="392" /><text x={gx} y="426">{formatYear(tick)}</text></g>;
+        return <g key={tick}><line x1={gx} x2={gx} y1={plot.top} y2={plot.bottom} /><text x={gx} y="496">{formatYear(tick)}</text></g>;
       })}
-      {categories.map((cat) => <g key={cat}><line x1="82" x2="842" y1={y(cat)} y2={y(cat)} /><text x="72" y={y(cat) + 4}>{cat}</text></g>)}
-      <text className="axis-title" x="462" y="452">Object End Date</text>
+      {categories.map((cat) => <g key={cat}><line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} /><text x="174" y={y(cat) + 4}>{cat}</text></g>)}
+      <text className="axis-title" x="975" y="524">Object End Date</text>
       {works.map((work, i) => (
         <circle key={work.id} className={selected?.id === work.id ? 'point selected' : 'point'} cx={x(work.year)} cy={y(plotCategory(work))}
           r={selected?.id === work.id ? 8 : 5.5} fill={['#ff0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a'][i % 5]}
@@ -227,7 +230,6 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
 }
 
 function ArtworkDetailCard({ artwork, onClose }) {
-  if (!artwork) return <aside className="detail-card empty"><p>Hover a point to inspect an artwork.</p></aside>;
   return (
     <aside className="detail-card">
       <button className="close" onClick={onClose}>×</button>
@@ -247,18 +249,9 @@ function ArtworkDetailCard({ artwork, onClose }) {
 function TimelineViewer() {
   const [range, setRange] = useState([-5000, 2000]);
   const [groupBy, setGroupBy] = useState('department');
-  const [hovered, setHovered] = useState(timelineArtworks[6]);
+  const [hovered, setHovered] = useState(null);
   const filtered = useMemo(() => timelineArtworks.filter((work) => work.year >= range[0] && work.year <= range[1]), [range]);
-
-  useEffect(() => {
-    if (!filtered.length) {
-      setHovered(null);
-      return;
-    }
-    if (!hovered || !filtered.some((work) => work.id === hovered.id)) {
-      setHovered(filtered[0]);
-    }
-  }, [filtered, hovered]);
+  const activeHover = hovered && filtered.some((work) => work.id === hovered.id) ? hovered : null;
 
   return (
     <main className="dashboard">
@@ -271,9 +264,9 @@ function TimelineViewer() {
           ))}
         </div>
       </section>
-      <section className="timeline-layout">
-        <ChartPanel title={`${groupBy} timeline`}><ScatterPlot works={filtered} groupBy={groupBy} range={range} onHover={setHovered} selected={hovered} /></ChartPanel>
-        <ArtworkDetailCard artwork={hovered} onClose={() => setHovered(null)} />
+      <section className={activeHover ? 'timeline-layout has-detail' : 'timeline-layout'}>
+        <ChartPanel title={`${groupBy} timeline`}><ScatterPlot works={filtered} groupBy={groupBy} range={range} onHover={setHovered} selected={activeHover} /></ChartPanel>
+        {activeHover && <ArtworkDetailCard artwork={activeHover} onClose={() => setHovered(null)} />}
       </section>
     </main>
   );
@@ -340,19 +333,23 @@ function ArtworkList({ room }) {
 }
 
 function GalleryMap() {
-  const [department, setDepartment] = useState('egyptian');
-  const [room, setRoom] = useState('720');
+  const [department, setDepartment] = useState(null);
+  const [room, setRoom] = useState(null);
   const chooseDepartment = (id) => {
     setDepartment(id);
-    setRoom(departmentRooms[id][0]);
+    setRoom(null);
   };
   return (
     <main className="dashboard">
       <PageTitle title="Gallery Map" subtitle="Explore how collections are arranged across museum galleries." />
-      <section className="gallery-layout">
+      <section className={['gallery-layout', department ? 'has-rooms' : '', room ? 'has-list' : ''].filter(Boolean).join(' ')}>
         <ChartPanel title="Museum Departments"><GalleryOverviewMap selected={department} onSelect={chooseDepartment} /></ChartPanel>
-        <ChartPanel title={`${departments.find((d) => d.id === department)?.label} Rooms`}><DepartmentDetailMap department={department} selectedRoom={room} onRoomSelect={setRoom} /></ChartPanel>
-        <ArtworkList room={room} />
+        {department && (
+          <ChartPanel title={`${departments.find((d) => d.id === department)?.label} Rooms`}>
+            <DepartmentDetailMap department={department} selectedRoom={room} onRoomSelect={setRoom} />
+          </ChartPanel>
+        )}
+        {room && <ArtworkList room={room} />}
       </section>
     </main>
   );

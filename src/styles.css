@@ -423,13 +423,17 @@ a {
 
 .timeline-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+}
+
+.timeline-layout.has-detail {
+  grid-template-columns: minmax(0, 1fr) 340px;
 }
 
 .scatter-svg {
   width: 100%;
-  height: clamp(430px, calc(100vh - 300px), 690px);
+  height: clamp(560px, calc(100vh - 260px), 780px);
 }
 
 .scatter-svg text {
@@ -544,13 +548,21 @@ a {
 
 .gallery-layout {
   display: grid;
-  grid-template-columns: 1.12fr 0.86fr 390px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+}
+
+.gallery-layout.has-rooms {
+  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+}
+
+.gallery-layout.has-list {
+  grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.82fr) 390px;
 }
 
 .map-svg {
   width: 100%;
-  height: clamp(360px, calc(100vh - 310px), 650px);
+  height: clamp(430px, calc(100vh - 280px), 720px);
 }
 
 .map-svg path {
@@ -652,7 +664,10 @@ a {
   .metric-grid,
   .summary-panels,
   .timeline-layout,
+  .timeline-layout.has-detail,
   .gallery-layout,
+  .gallery-layout.has-rooms,
+  .gallery-layout.has-list,
   .timeline-controls {
     grid-template-columns: 1fr;
   }

@@ -368,6 +368,7 @@ function RangeSlider({ range, setRange }) {
 
 function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const [minYear, maxYear] = range;
+  const axisBreaks = [-5000, -1000, 0, 500, 1000, 1500, 2000];
   const categories = [...new Set(works.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
   const rowGap = groupBy === 'culture' ? 34 : 42;
   const svgHeight = Math.max(530, 112 + Math.max(1, categories.length - 1) * rowGap);
@@ -377,10 +378,26 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const plotCategory = (work) => {
     return work[groupBy] || 'Unknown';
   };
-  const ticks = Array.from({ length: 8 }, (_, i) => Math.round(minYear + ((maxYear - minYear) / 7) * i));
-  const x = (year) => plot.left + ((year - minYear) / (maxYear - minYear)) * plotWidth;
+  const ticks = [minYear, ...axisBreaks.filter((year) => year > minYear && year < maxYear), maxYear]
+    .filter((year, index, years) => index === 0 || year !== years[index - 1]);
+  const x = (year) => {
+    const clampedYear = clamp(year, minYear, maxYear);
+    const segmentIndex = ticks.findIndex((tick, index) => clampedYear >= tick && clampedYear <= ticks[index + 1]);
+
+    if (segmentIndex < 0 || ticks.length === 1) return plot.left;
+
+    const start = ticks[segmentIndex];
+    const end = ticks[segmentIndex + 1];
+    const segmentWidth = plotWidth / (ticks.length - 1);
+    const localProgress = end === start ? 0 : (clampedYear - start) / (end - start);
+    return plot.left + segmentIndex * segmentWidth + localProgress * segmentWidth;
+  };
   const y = (cat) => plot.top + categories.indexOf(cat) * (plotHeight / Math.max(1, categories.length - 1));
-  const formatYear = (year) => (year < 0 ? `${Math.abs(year)}` : `${year}`);
+  const formatYear = (year) => {
+    if (year < 0) return `BC ${Math.abs(year)}`;
+    if (year === 0) return '0';
+    return `AD ${year}`;
+  };
   const categoryColor = (category) => {
     const hash = category.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return categoryPalette[hash % categoryPalette.length];

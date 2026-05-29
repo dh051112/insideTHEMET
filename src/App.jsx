@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   classificationCounts,
   departmentCounts,
+  floorPlans,
   floorRooms,
   floorSections,
   galleryArtworks,
@@ -167,7 +168,24 @@ function MiniDepartmentBars() {
   );
 }
 
+function FloorSelector({ activeFloor, onFloorChange }) {
+  return (
+    <div className="floor-selector">
+      {floorPlans.map((plan) => (
+        <button key={plan.id} className={activeFloor === plan.id ? 'active' : ''} onClick={(event) => {
+          event.stopPropagation();
+          onFloorChange(plan.id);
+        }}>
+          <strong>{plan.label}</strong>
+          <span>{plan.note}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function SummaryMapPreview({ onOpenMap }) {
+  const [activeFloor, setActiveFloor] = useState('floor-1');
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -181,7 +199,8 @@ function SummaryMapPreview({ onOpenMap }) {
         <h2>Met-Inspired Gallery Sections</h2>
         <span>Open gallery map</span>
       </div>
-      <FloorOverviewMap selected={null} onSelect={onOpenMap} />
+      <FloorSelector activeFloor={activeFloor} onFloorChange={setActiveFloor} />
+      <FloorOverviewMap activeFloor={activeFloor} selected={null} onSelect={onOpenMap} />
     </section>
   );
 }
@@ -307,15 +326,19 @@ function TimelineViewer() {
   );
 }
 
-function FloorOverviewMap({ selected, onSelect }) {
+function FloorOverviewMap({ activeFloor, selected, onSelect }) {
+  const visibleSections = floorSections.filter((section) => section.floor === activeFloor);
+  const activePlan = floorPlans.find((plan) => plan.id === activeFloor);
+
   return (
     <svg className="map-svg floor-overview" viewBox="0 0 1240 540">
       <path className="building-outline" d="M66 386H112V184h48V38h930v150h54v180h-54v134H66Z" />
       <path className="floor-spine" d="M406 276H452M696 270H724M992 276H1014M574 218V180M574 322V362M858 210V180M858 340V360" />
       <rect className="great-hall" x="470" y="224" width="208" height="88" rx="4" />
       <text className="hall-label" x="574" y="269">Great Hall</text>
+      <text className="floor-label" x="1148" y="72">{activePlan?.label}</text>
       <text className="facade-label" x="574" y="526">Fifth Avenue Entrance</text>
-      {floorSections.map((section) => (
+      {visibleSections.map((section) => (
         <g key={section.id} onClick={() => onSelect(section.id)} className={selected === section.id ? 'map-room active' : 'map-room'}>
           <rect x={section.x} y={section.y} width={section.w} height={section.h} rx="3" />
           <text x={section.x + section.w / 2} y={section.y + section.h / 2 - 10}>{section.label}</text>
@@ -375,8 +398,14 @@ function ArtworkList({ room }) {
 }
 
 function GalleryMap() {
+  const [activeFloor, setActiveFloor] = useState('floor-1');
   const [floor, setFloor] = useState(null);
   const [room, setRoom] = useState(null);
+  const chooseMapFloor = (id) => {
+    setActiveFloor(id);
+    setFloor(null);
+    setRoom(null);
+  };
   const chooseFloor = (id) => {
     setFloor(id);
     setRoom(null);
@@ -387,7 +416,10 @@ function GalleryMap() {
     <main className="dashboard">
       <PageTitle title="Gallery Map" subtitle="Explore a Met-inspired floor plan schematic, then inspect CSV gallery rooms and artworks." />
       <section className={['gallery-layout', floor ? 'has-rooms' : '', room ? 'has-list' : ''].filter(Boolean).join(' ')}>
-        <ChartPanel title="Met-Inspired Gallery Sections"><FloorOverviewMap selected={floor} onSelect={chooseFloor} /></ChartPanel>
+        <ChartPanel title="Met-Inspired Gallery Sections">
+          <FloorSelector activeFloor={activeFloor} onFloorChange={chooseMapFloor} />
+          <FloorOverviewMap activeFloor={activeFloor} selected={floor} onSelect={chooseFloor} />
+        </ChartPanel>
         {floor && (
           <ChartPanel title={`${selectedFloor?.label} Rooms`}>
             <FloorDetailMap floor={floor} selectedRoom={room} onRoomSelect={setRoom} />

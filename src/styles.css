@@ -275,6 +275,49 @@ a {
   font-size: 18px;
 }
 
+.floor-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.floor-selector button {
+  min-height: 58px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.floor-selector button:hover,
+.floor-selector button.active {
+  border-color: var(--red);
+  background: rgba(237, 0, 43, 0.12);
+  box-shadow: 0 0 16px rgba(237, 0, 43, 0.24);
+}
+
+.floor-selector strong,
+.floor-selector span {
+  display: block;
+}
+
+.floor-selector strong {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.floor-selector span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .summary-overview {
   display: grid;
   grid-template-rows: auto auto 1fr;
@@ -734,6 +777,15 @@ a {
   text-transform: uppercase;
 }
 
+.floor-label {
+  fill: rgba(255, 255, 255, 0.16);
+  text-anchor: end;
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 .map-room {
   cursor: pointer;
 }
@@ -883,5 +935,9 @@ a {
 
   .filter-buttons {
     display: grid;
+  }
+
+  .floor-selector {
+    grid-template-columns: 1fr;
   }
 }

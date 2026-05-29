@@ -165,6 +165,12 @@ export const departmentRooms = {
   egyptian: ['720', '721', '722', '723', '724', '725', '726', '727', '728'],
 };
 
+export const floorPlans = [
+  { id: 'floor-1', label: 'Floor 1', note: 'Entry, Egyptian, Greek/Roman, American Wing' },
+  { id: 'floor-2', label: 'Floor 2', note: 'Asian, European, Islamic, decorative arts' },
+  { id: 'floor-lower', label: 'Lower & Special', note: 'Cloisters references, instruments, global collections' },
+];
+
 const worksByRoom = timelineArtworks.reduce((acc, work) => {
   if (!work.galleryNumber) return acc;
   if (!acc[work.galleryNumber]) acc[work.galleryNumber] = [];
@@ -175,6 +181,7 @@ const worksByRoom = timelineArtworks.reduce((acc, work) => {
 export const floorSections = [
   {
     id: 'great-hall-axis',
+    floor: 'floor-1',
     label: 'Great Hall Axis',
     subtitle: 'Entry and central circulation',
     departments: ['Medieval Art', 'The Cloisters'],
@@ -186,6 +193,7 @@ export const floorSections = [
   },
   {
     id: 'egyptian-wing',
+    floor: 'floor-1',
     label: 'Egyptian Art',
     subtitle: 'Temple-side east wing',
     departments: ['Egyptian Art'],
@@ -197,6 +205,7 @@ export const floorSections = [
   },
   {
     id: 'greek-roman',
+    floor: 'floor-1',
     label: 'Greek and Roman',
     subtitle: 'Classical galleries',
     departments: ['Greek and Roman Art'],
@@ -208,6 +217,7 @@ export const floorSections = [
   },
   {
     id: 'american-wing',
+    floor: 'floor-1',
     label: 'American Wing',
     subtitle: 'West-side period rooms',
     departments: ['The American Wing'],
@@ -219,6 +229,7 @@ export const floorSections = [
   },
   {
     id: 'asian-art',
+    floor: 'floor-2',
     label: 'Asian Art',
     subtitle: 'North galleries',
     departments: ['Asian Art'],
@@ -230,6 +241,7 @@ export const floorSections = [
   },
   {
     id: 'european-paintings',
+    floor: 'floor-2',
     label: 'European Paintings',
     subtitle: 'Upper painting galleries',
     departments: ['European Paintings', 'Robert Lehman Collection'],
@@ -241,6 +253,7 @@ export const floorSections = [
   },
   {
     id: 'decorative-arts',
+    floor: 'floor-2',
     label: 'European Decorative Arts',
     subtitle: 'Sculpture and interiors',
     departments: ['European Sculpture and Decorative Arts'],
@@ -252,6 +265,7 @@ export const floorSections = [
   },
   {
     id: 'arms-medieval',
+    floor: 'floor-1',
     label: 'Arms / Medieval',
     subtitle: 'Armor court and medieval rooms',
     departments: ['Arms and Armor', 'Medieval Art'],
@@ -263,6 +277,7 @@ export const floorSections = [
   },
   {
     id: 'islamic-art',
+    floor: 'floor-2',
     label: 'Islamic Art',
     subtitle: 'Court-side galleries',
     departments: ['Islamic Art'],
@@ -274,6 +289,7 @@ export const floorSections = [
   },
   {
     id: 'instruments-aoa',
+    floor: 'floor-lower',
     label: 'Instruments / AOA',
     subtitle: 'Music and global collections',
     departments: ['Musical Instruments', 'Arts of Africa, Oceania, and the Americas'],

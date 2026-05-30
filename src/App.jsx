@@ -380,7 +380,7 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const [minYear, maxYear] = range;
   const axisBreaks = [-5000, -1000, 0, 500, 1000, 1500, 2000];
   const categories = [...new Set(works.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
-  const rowGap = groupBy === 'culture' ? 34 : 42;
+  const rowGap = groupBy === 'culture' ? 48 : 60;
   const svgHeight = Math.max(530, 112 + Math.max(1, categories.length - 1) * rowGap);
   const plot = { left: 230, right: 1760, top: 34, bottom: svgHeight - 72 };
   const plotWidth = plot.right - plot.left;
@@ -421,11 +421,12 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
     const index = group.indexOf(work.id);
     const ring = Math.floor(index / 8);
     const angle = ((index % 8) / 8) * Math.PI * 2 + ring * 0.42;
-    const radius = Math.min(34, 12 + ring * 8);
+    const radius = Math.min(52, 16 + ring * 10);
+    const maxYOffset = rowGap * 0.38;
 
     return {
       x: Math.cos(angle) * radius,
-      y: Math.sin(angle) * radius * 0.58,
+      y: Math.max(-maxYOffset, Math.min(maxYOffset, Math.sin(angle) * radius * 0.95)),
     };
   };
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));

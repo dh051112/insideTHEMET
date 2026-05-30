@@ -377,6 +377,7 @@ function RangeSlider({ range, setRange }) {
 }
 
 function ScatterPlot({ works, groupBy, range, onHover, selected }) {
+  const [fisheyeFocus, setFisheyeFocus] = useState(null);
   const [minYear, maxYear] = range;
   const axisBreaks = [-5000, -1000, 0, 500, 1000, 1500, 2000];
   const categories = [...new Set(works.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
@@ -430,6 +431,25 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
     };
   };
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const applyFisheye = (point) => {
+    if (!fisheyeFocus) return point;
+
+    const dx = point.x - fisheyeFocus.x;
+    const dy = point.y - fisheyeFocus.y;
+    const distance = Math.hypot(dx, dy);
+    const radius = 95;
+
+    if (!distance || distance > radius) return point;
+
+    const strength = (1 - distance / radius) * 24;
+    const nx = dx / distance;
+    const ny = dy / distance;
+
+    return {
+      x: clamp(point.x + nx * strength, plot.left, plot.right),
+      y: clamp(point.y + ny * strength, plot.top, plot.bottom),
+    };
+  };
 
   return (
     <svg className="scatter-svg" style={{ '--scatter-height': `${svgHeight}px` }} viewBox={`0 0 1800 ${svgHeight}`}>
@@ -441,8 +461,13 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
       <text className="axis-title" x="995" y={svgHeight - 8}>Object End Date</text>
       {works.map((work, i) => {
         const offset = jitter(work);
-        const cx = clamp(x(work.year) + offset.x, plot.left, plot.right);
-        const cy = clamp(y(plotCategory(work)) + offset.y, plot.top, plot.bottom);
+        const basePoint = {
+          x: clamp(x(work.year) + offset.x, plot.left, plot.right),
+          y: clamp(y(plotCategory(work)) + offset.y, plot.top, plot.bottom),
+        };
+        const distortedPoint = applyFisheye(basePoint);
+        const cx = distortedPoint.x;
+        const cy = distortedPoint.y;
         const isSelected = selected?.id === work.id;
 
         return (
@@ -450,7 +475,17 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
             {isSelected && <circle className="point-ring" cx={cx} cy={cy} r="17" />}
             <circle className={isSelected ? 'point selected' : 'point'} cx={cx} cy={cy}
               r={isSelected ? 8 : 5.5} fill={mediumColors[work.mediumGroup] || mediumColors.Other}
-              onMouseEnter={() => onHover(work)} onFocus={() => onHover(work)} tabIndex="0" />
+              onMouseEnter={() => {
+                setFisheyeFocus(basePoint);
+                onHover(work);
+              }}
+              onMouseLeave={() => setFisheyeFocus(null)}
+              onFocus={() => {
+                setFisheyeFocus(basePoint);
+                onHover(work);
+              }}
+              onBlur={() => setFisheyeFocus(null)}
+              tabIndex="0" />
           </g>
         );
       })}

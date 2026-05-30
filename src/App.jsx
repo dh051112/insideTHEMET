@@ -17,7 +17,17 @@ const tabs = [
   ['map', 'gallery map'],
 ];
 
-const categoryPalette = ['#ef0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a', '#b68cff', '#ff8a4c', '#58a6ff', '#d7ff5f', '#ff5f9f', '#55d6be', '#dca85d'];
+const mediumColors = {
+  Painting: '#ef0033',
+  Stone: '#42e8ff',
+  Metal: '#ffbd45',
+  Ceramic: '#ff63d8',
+  Wood: '#77ff8a',
+  Textile: '#b68cff',
+  Paper: '#ff8a4c',
+  Glass: '#58a6ff',
+  Other: '#aab4ba',
+};
 const metImageCache = new Map();
 
 function MetArtworkImage({ artwork, alt = '', className = '' }) {
@@ -183,12 +193,12 @@ function MetricCard({ icon, value, label, note }) {
   );
 }
 
-function ChartPanel({ title, children, footer }) {
+function ChartPanel({ title, children, footer, headerExtra }) {
   return (
     <section className="chart-panel">
       <div className="panel-head">
         <h2>{title}</h2>
-        <span>ⓘ</span>
+        {headerExtra || <span>ⓘ</span>}
       </div>
       {children}
       {footer && <div className="panel-footer">{footer}</div>}
@@ -398,10 +408,7 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
     if (year === 0) return '0';
     return `AD ${year}`;
   };
-  const categoryColor = (category) => {
-    const hash = category.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    return categoryPalette[hash % categoryPalette.length];
-  };
+  const visibleMediumGroups = Object.keys(mediumColors).filter((group) => works.some((work) => work.mediumGroup === group));
   const groupPositions = works.reduce((acc, work) => {
     const key = `${Math.round(work.year / 25) * 25}-${plotCategory(work)}`;
     if (!acc.has(key)) acc.set(key, []);
@@ -441,7 +448,7 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
           <g key={work.id} className="point-wrap">
             {isSelected && <circle className="point-ring" cx={cx} cy={cy} r="17" />}
             <circle className={isSelected ? 'point selected' : 'point'} cx={cx} cy={cy}
-              r={isSelected ? 8 : 5.5} fill={categoryColor(plotCategory(work))}
+              r={isSelected ? 8 : 5.5} fill={mediumColors[work.mediumGroup] || mediumColors.Other}
               onMouseEnter={() => onHover(work)} onFocus={() => onHover(work)} tabIndex="0" />
           </g>
         );
@@ -464,6 +471,31 @@ function ArtworkDetailCard({ artwork, onClose }) {
       <p>{artwork.description}</p>
       <a href={artwork.link} target="_blank" rel="noreferrer">View on The Met Website</a>
     </aside>
+  );
+}
+
+function MediumHeaderLegend({ works }) {
+  const counts = works.reduce((acc, work) => {
+    const group = work.mediumGroup || 'Other';
+    acc[group] = (acc[group] || 0) + 1;
+    return acc;
+  }, {});
+  const groups = Object.keys(mediumColors)
+    .filter((group) => counts[group])
+    .sort((a, b) => counts[b] - counts[a]);
+  const max = Math.max(...groups.map((group) => counts[group]), 1);
+
+  return (
+    <div className="header-medium-legend">
+      <span>Medium</span>
+      {groups.map((group) => (
+        <div className="header-medium-row" key={group}>
+          <em>{group}</em>
+          <i><b style={{ width: `${Math.max(8, (counts[group] / max) * 96)}px`, background: mediumColors[group] }} /></i>
+          <strong>{counts[group]}</strong>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -495,7 +527,9 @@ function TimelineViewer({ target }) {
         </div>
       </section>
       <section className={activeHover ? 'timeline-layout has-detail' : 'timeline-layout'}>
-        <ChartPanel title={`${groupBy} timeline`}><ScatterPlot works={filtered} groupBy={groupBy} range={range} onHover={setHovered} selected={activeHover} /></ChartPanel>
+        <ChartPanel title={`${groupBy} timeline`} headerExtra={<MediumHeaderLegend works={filtered} />}>
+          <ScatterPlot works={filtered} groupBy={groupBy} range={range} onHover={setHovered} selected={activeHover} />
+        </ChartPanel>
         {activeHover && <ArtworkDetailCard artwork={activeHover} onClose={() => setHovered(null)} />}
       </section>
     </main>

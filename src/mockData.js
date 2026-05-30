@@ -94,6 +94,19 @@ const toArtwork = (row, index) => {
   const title = normalize(row.Title || row['Object Name'], 'Untitled work');
   const artist = normalize(row['Artist Display Name'], 'Unknown artist');
   const classification = normalize(row.Classification, 'Unclassified');
+  const medium = normalize(row.Medium, 'Medium not listed');
+  const mediumText = medium.toLowerCase();
+  const mediumGroup = (() => {
+    if (/oil|canvas|paint|tempera|watercolor|gouache|acrylic/.test(mediumText)) return 'Painting';
+    if (/marble|stone|limestone|sandstone|granite|slate|alabaster|jade/.test(mediumText)) return 'Stone';
+    if (/bronze|gold|silver|copper|iron|steel|brass|metal|pewter|tin/.test(mediumText)) return 'Metal';
+    if (/ceramic|terracotta|porcelain|earthenware|stoneware|faience|clay/.test(mediumText)) return 'Ceramic';
+    if (/wood|walnut|oak|pine|maple|cedar|ash|mahogany|bamboo/.test(mediumText)) return 'Wood';
+    if (/silk|wool|cotton|linen|textile|velvet|tapestry|cloth|fiber/.test(mediumText)) return 'Textile';
+    if (/paper|ink|print|etching|engraving|drawing|graphite|chalk|pastel|photograph/.test(mediumText)) return 'Paper';
+    if (/glass/.test(mediumText)) return 'Glass';
+    return 'Other';
+  })();
 
   return {
     id: row['Object ID'] || `${row['Object Number']}-${index}`,
@@ -104,7 +117,8 @@ const toArtwork = (row, index) => {
     department: normalize(row.Department),
     classification,
     culture: normalize(row.Culture),
-    medium: normalize(row.Medium, 'Medium not listed'),
+    medium,
+    mediumGroup,
     accession: normalize(row['Object Number'], 'No accession number'),
     galleryNumber: normalize(row['Gallery Number'], ''),
     date: normalize(row['Object Date'], Number.isFinite(year) ? String(year) : 'Date unknown'),

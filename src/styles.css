@@ -686,13 +686,15 @@ a {
 }
 
 .timeline-layout .chart-panel {
+  max-height: clamp(560px, calc(100vh - 236px), 760px);
   overflow: auto;
 }
 
 .scatter-svg {
   width: 100%;
-  height: max(clamp(560px, calc(100vh - 260px), 780px), var(--scatter-height));
+  height: var(--scatter-height);
   min-width: 1000px;
+  display: block;
 }
 
 .scatter-svg text {

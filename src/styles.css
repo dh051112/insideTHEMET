@@ -709,7 +709,7 @@ a {
   stroke: rgba(255, 255, 255, 0.6);
   stroke-width: 1;
   opacity: 0.58;
-  filter: drop-shadow(0 0 8px currentColor);
+  filter: none;
   transition: cx 120ms ease-out, cy 120ms ease-out, r 120ms ease-out, opacity 120ms ease-out;
 }
 
@@ -718,7 +718,7 @@ a {
   stroke: white;
   stroke-width: 2;
   pointer-events: none;
-  filter: drop-shadow(0 0 18px rgba(237, 0, 43, 0.82));
+  filter: none;
   transition: cx 120ms ease-out, cy 120ms ease-out;
 }
 
@@ -727,7 +727,7 @@ a {
   opacity: 1;
   stroke: white;
   stroke-width: 2.5;
-  filter: drop-shadow(0 0 20px var(--red));
+  filter: none;
 }
 
 .detail-card {

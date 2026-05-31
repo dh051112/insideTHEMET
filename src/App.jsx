@@ -371,8 +371,8 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const [minYear, maxYear] = range;
   const axisBreaks = [-5000, -1000, 0, 500, 1000, 1250, 1500, 1750, 2000];
   const categories = [...new Set(works.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
-  const rowGap = groupBy === 'culture' ? 64 : 76;
-  const svgHeight = Math.max(620, 150 + Math.max(1, categories.length - 1) * rowGap);
+  const rowGap = groupBy === 'department' ? 58 : groupBy === 'classification' ? 34 : 28;
+  const svgHeight = Math.min(2600, Math.max(620, 150 + Math.max(1, categories.length - 1) * rowGap));
   const plot = { left: 230, right: 1760, top: 34, bottom: svgHeight - 72 };
   const plotWidth = plot.right - plot.left;
   const plotHeight = plot.bottom - plot.top;

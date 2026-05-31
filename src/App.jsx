@@ -17,7 +17,12 @@ const tabs = [
   ['map', 'gallery map'],
 ];
 
-const categoryPalette = ['#ef0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a', '#b68cff', '#ff8a4c', '#58a6ff', '#d7ff5f', '#ff5f9f', '#55d6be', '#dca85d'];
+const categoryPalette = [
+  '#ff174f', '#00d5ff', '#ffd23f', '#b967ff', '#24e27a', '#ff7a1a',
+  '#ff4fd8', '#5b8cff', '#c8ff2e', '#ff9f9f', '#00b38f', '#f2f5ff',
+  '#c84b31', '#72ffcf', '#a06bff', '#ffcc8a', '#16a3ff', '#f4ff78',
+  '#ff5c77', '#4be04b', '#9ad7ff', '#ff8a00', '#d778ff', '#b8f000',
+];
 const metImageCache = new Map();
 
 function MetArtworkImage({ artwork, alt = '', className = '' }) {
@@ -406,13 +411,10 @@ function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, se
     if (year === 0) return '0';
     return `AD ${year}`;
   };
-  const categoryColor = (category) => {
-    const hash = category.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    return categoryPalette[hash % categoryPalette.length];
-  };
+  const categoryColor = (category) => categoryPalette[categories.indexOf(category) % categoryPalette.length];
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const bubbleRadius = (count) => Math.min(34, 5 + Math.sqrt(count) * 4.4);
-  const clusters = [...works.reduce((acc, work) => {
+  const groupedWorks = [...works.reduce((acc, work) => {
     const category = plotCategory(work);
     const clusterYear = Math.round(work.year / 10) * 10;
     const key = `${category}-${clusterYear}`;
@@ -421,7 +423,15 @@ function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, se
     }
     acc.get(key).works.push(work);
     return acc;
-  }, new Map()).values()].map((cluster) => {
+  }, new Map()).values()];
+  const clusters = groupedWorks.flatMap((cluster) => {
+    const sortedWorks = [...cluster.works].sort((a, b) => a.year - b.year || a.title.localeCompare(b.title));
+    const chunks = [];
+    for (let index = 0; index < sortedWorks.length; index += 8) {
+      chunks.push(sortedWorks.slice(index, index + 8));
+    }
+    return chunks.map((chunk, index) => ({ ...cluster, id: `${cluster.id}-${index}`, works: chunk }));
+  }).map((cluster) => {
     const meanYear = cluster.works.reduce((sum, work) => sum + work.year, 0) / cluster.works.length;
     return {
       ...cluster,
@@ -434,9 +444,9 @@ function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, se
       .filter((cluster) => cluster.category === category)
       .sort((a, b) => a.year - b.year || a.id.localeCompare(b.id));
     const placed = [];
-    const yLimit = Math.min(yStep * 0.36, 24);
-    const yOffsets = [0, -0.3, 0.3, -0.6, 0.6, -1, 1].map((value) => value * yLimit);
-    const xOffsets = [0, 44, -44, 88, -88, 132, -132, 176, -176];
+    const yLimit = Math.min(yStep * 0.42, 28);
+    const yOffsets = [0, -0.25, 0.25, -0.5, 0.5, -0.75, 0.75, -1, 1].map((value) => value * yLimit);
+    const xOffsets = [0, 64, -64, 128, -128, 192, -192, 256, -256, 320, -320];
 
     return rowClusters.map((cluster, index) => {
       const radius = bubbleRadius(cluster.count);
@@ -448,7 +458,7 @@ function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, se
       })));
       const position = candidates.find((candidate) => placed.every((other) => {
         const distance = Math.hypot(candidate.x - other.x, candidate.y - other.y);
-        return distance > radius + other.radius + 4;
+        return distance > radius + other.radius + 12;
       })) || {
         x: clamp(baseX + ((index % 7) - 3) * 36, plot.left + radius + 4, plot.right - radius - 4),
         y: clamp(baseY + (((index % 9) - 4) / 4) * yLimit, plot.top + radius + 4, plot.bottom - radius - 4),
@@ -473,7 +483,7 @@ function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, se
         const radius = cluster.radius;
 
         return (
-          <g key={cluster.id} className="point-wrap">
+          <g key={cluster.id} className={isSelected ? 'point-wrap selected' : 'point-wrap'}>
             {isSelected && <circle className="point-ring" cx={cx} cy={cy} r={radius + 8} />}
             <circle className={isSelected ? 'point selected bubble-point' : 'point bubble-point'} cx={cx} cy={cy}
               r={isSelected ? radius + 2 : radius} fill={categoryColor(cluster.category)}

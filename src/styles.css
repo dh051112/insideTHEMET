@@ -759,9 +759,9 @@ a {
 
 .point {
   cursor: pointer;
-  stroke: rgba(255, 255, 255, 0.6);
-  stroke-width: 1;
-  opacity: 0.58;
+  stroke: transparent;
+  stroke-width: 0;
+  opacity: 0.72;
   filter: none;
   transition: cx 120ms ease-out, cy 120ms ease-out, r 120ms ease-out, opacity 120ms ease-out;
 }
@@ -778,13 +778,13 @@ a {
 .point:hover,
 .point.selected {
   opacity: 1;
-  stroke: white;
-  stroke-width: 2.5;
+  stroke: transparent;
+  stroke-width: 0;
   filter: none;
 }
 
 .bubble-point {
-  fill-opacity: 0.68;
+  fill-opacity: 0.82;
 }
 
 .bubble-count {
@@ -793,6 +793,14 @@ a {
   font-weight: 700;
   text-anchor: middle;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.point-wrap:hover .bubble-count,
+.point-wrap:focus-within .bubble-count,
+.point-wrap.selected .bubble-count {
+  opacity: 1;
 }
 
 .detail-card {
@@ -984,7 +992,7 @@ a {
 }
 
 .art-list {
-  max-height: clamp(466px, calc(100vh - 236px), 720px);
+  max-height: calc(100vh - 106px);
   overflow: auto;
 }
 

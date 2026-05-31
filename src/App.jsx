@@ -17,17 +17,7 @@ const tabs = [
   ['map', 'gallery map'],
 ];
 
-const mediumColors = {
-  Painting: '#ef0033',
-  Stone: '#42e8ff',
-  Metal: '#ffbd45',
-  Ceramic: '#ff63d8',
-  Wood: '#77ff8a',
-  Textile: '#b68cff',
-  Paper: '#ff8a4c',
-  Glass: '#58a6ff',
-  Other: '#aab4ba',
-};
+const categoryPalette = ['#ef0033', '#42e8ff', '#ffbd45', '#ff63d8', '#77ff8a', '#b68cff', '#ff8a4c', '#58a6ff', '#d7ff5f', '#ff5f9f', '#55d6be', '#dca85d'];
 const metImageCache = new Map();
 
 function MetArtworkImage({ artwork, alt = '', className = '' }) {
@@ -379,10 +369,10 @@ function RangeSlider({ range, setRange }) {
 function ScatterPlot({ works, groupBy, range, onHover, selected }) {
   const [fisheyeFocus, setFisheyeFocus] = useState(null);
   const [minYear, maxYear] = range;
-  const axisBreaks = [-5000, -1000, 0, 500, 1000, 1500, 2000];
+  const axisBreaks = [-5000, -1000, 0, 500, 1000, 1250, 1500, 1750, 2000];
   const categories = [...new Set(works.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
-  const rowGap = groupBy === 'culture' ? 48 : 60;
-  const svgHeight = Math.max(530, 112 + Math.max(1, categories.length - 1) * rowGap);
+  const rowGap = groupBy === 'culture' ? 64 : 76;
+  const svgHeight = Math.max(620, 150 + Math.max(1, categories.length - 1) * rowGap);
   const plot = { left: 230, right: 1760, top: 34, bottom: svgHeight - 72 };
   const plotWidth = plot.right - plot.left;
   const plotHeight = plot.bottom - plot.top;
@@ -409,7 +399,10 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
     if (year === 0) return '0';
     return `AD ${year}`;
   };
-  const visibleMediumGroups = Object.keys(mediumColors).filter((group) => works.some((work) => work.mediumGroup === group));
+  const categoryColor = (category) => {
+    const hash = category.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return categoryPalette[hash % categoryPalette.length];
+  };
   const groupPositions = works.reduce((acc, work) => {
     const key = `${Math.round(work.year / 25) * 25}-${plotCategory(work)}`;
     if (!acc.has(key)) acc.set(key, []);
@@ -423,7 +416,7 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
     const ring = Math.floor(index / 8);
     const angle = ((index % 8) / 8) * Math.PI * 2 + ring * 0.42;
     const radius = Math.min(52, 16 + ring * 10);
-    const maxYOffset = rowGap * 0.38;
+    const maxYOffset = rowGap * 0.34;
 
     return {
       x: Math.cos(angle) * radius,
@@ -474,7 +467,7 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
           <g key={work.id} className="point-wrap">
             {isSelected && <circle className="point-ring" cx={cx} cy={cy} r="17" />}
             <circle className={isSelected ? 'point selected' : 'point'} cx={cx} cy={cy}
-              r={isSelected ? 8 : 5.5} fill={mediumColors[work.mediumGroup] || mediumColors.Other}
+              r={isSelected ? 8 : 5.5} fill={categoryColor(plotCategory(work))}
               onMouseEnter={() => {
                 setFisheyeFocus(basePoint);
                 onHover(work);
@@ -510,31 +503,6 @@ function ArtworkDetailCard({ artwork, onClose }) {
   );
 }
 
-function MediumHeaderLegend({ works }) {
-  const counts = works.reduce((acc, work) => {
-    const group = work.mediumGroup || 'Other';
-    acc[group] = (acc[group] || 0) + 1;
-    return acc;
-  }, {});
-  const groups = Object.keys(mediumColors)
-    .filter((group) => counts[group])
-    .sort((a, b) => counts[b] - counts[a]);
-  const max = Math.max(...groups.map((group) => counts[group]), 1);
-
-  return (
-    <div className="header-medium-legend">
-      <span>Medium</span>
-      {groups.map((group) => (
-        <div className="header-medium-row" key={group}>
-          <em>{group}</em>
-          <i><b style={{ width: `${Math.max(8, (counts[group] / max) * 96)}px`, background: mediumColors[group] }} /></i>
-          <strong>{counts[group]}</strong>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function TimelineViewer({ target }) {
   const [range, setRange] = useState([-5000, 2000]);
   const [groupBy, setGroupBy] = useState('department');
@@ -563,7 +531,7 @@ function TimelineViewer({ target }) {
         </div>
       </section>
       <section className={activeHover ? 'timeline-layout has-detail' : 'timeline-layout'}>
-        <ChartPanel title={`${groupBy} timeline`} headerExtra={<MediumHeaderLegend works={filtered} />}>
+        <ChartPanel title={`${groupBy} timeline`}>
           <ScatterPlot works={filtered} groupBy={groupBy} range={range} onHover={setHovered} selected={activeHover} />
         </ChartPanel>
         {activeHover && <ArtworkDetailCard artwork={activeHover} onClose={() => setHovered(null)} />}

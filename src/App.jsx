@@ -350,6 +350,10 @@ function CollectionSummary({ onOpenMap }) {
 
 function RangeSlider({ range, setRange }) {
   const [min, max] = range;
+  const sliderMin = -5000;
+  const sliderMax = 2000;
+  const minPercent = ((min - sliderMin) / (sliderMax - sliderMin)) * 100;
+  const maxPercent = ((max - sliderMin) / (sliderMax - sliderMin)) * 100;
   const clamp = (value, side) => {
     const next = Number(value);
     if (side === 'min') setRange([Math.min(next, max - 100), max]);
@@ -359,21 +363,23 @@ function RangeSlider({ range, setRange }) {
     <div className="range-control">
       <div><span>{min < 0 ? `${Math.abs(min)} BC` : `AD ${min}`}</span><span>{max < 0 ? `${Math.abs(max)} BC` : `AD ${max}`}</span></div>
       <div className="dual-range">
-        <input type="range" min="-5000" max="2000" step="50" value={min} onChange={(e) => clamp(e.target.value, 'min')} />
-        <input type="range" min="-5000" max="2000" step="50" value={max} onChange={(e) => clamp(e.target.value, 'max')} />
+        <div className="range-track" />
+        <div className="range-fill" style={{ left: `${minPercent}%`, width: `${maxPercent - minPercent}%` }} />
+        <input type="range" min={sliderMin} max={sliderMax} step="50" value={min} onChange={(e) => clamp(e.target.value, 'min')} />
+        <input type="range" min={sliderMin} max={sliderMax} step="50" value={max} onChange={(e) => clamp(e.target.value, 'max')} />
       </div>
     </div>
   );
 }
 
-function ScatterPlot({ works, groupBy, range, onHover, selected }) {
-  const [fisheyeFocus, setFisheyeFocus] = useState(null);
+function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, selectedClusterId, selectedArtworkId }) {
   const [minYear, maxYear] = range;
-  const axisBreaks = [-5000, -1000, 0, 500, 1000, 1250, 1500, 1750, 2000];
-  const categories = [...new Set(works.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
+  const axisBreaks = [-5000, -1000, 0, 250, 500, 750, 1000, 1250, 1500, 1750, 2000];
+  const categories = [...new Set(categoryWorks.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
   const rowGap = groupBy === 'department' ? 58 : groupBy === 'classification' ? 34 : 28;
   const svgHeight = Math.min(2200, Math.max(620, 150 + Math.max(1, categories.length - 1) * rowGap));
-  const plot = { left: 230, right: 1760, top: 34, bottom: svgHeight - 72 };
+  const svgWidth = 2200;
+  const plot = { left: 250, right: 2140, top: 34, bottom: svgHeight - 72 };
   const plotWidth = plot.right - plot.left;
   const plotHeight = plot.bottom - plot.top;
   const plotCategory = (work) => {
@@ -394,6 +400,7 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
     return plot.left + segmentIndex * segmentWidth + localProgress * segmentWidth;
   };
   const y = (cat) => plot.top + categories.indexOf(cat) * (plotHeight / Math.max(1, categories.length - 1));
+  const yStep = categories.length > 1 ? plotHeight / (categories.length - 1) : rowGap;
   const formatYear = (year) => {
     if (year < 0) return `BC ${Math.abs(year)}`;
     if (year === 0) return '0';
@@ -403,82 +410,78 @@ function ScatterPlot({ works, groupBy, range, onHover, selected }) {
     const hash = category.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return categoryPalette[hash % categoryPalette.length];
   };
-  const groupPositions = works.reduce((acc, work) => {
-    const key = `${Math.round(work.year / 25) * 25}-${plotCategory(work)}`;
-    if (!acc.has(key)) acc.set(key, []);
-    acc.get(key).push(work.id);
-    return acc;
-  }, new Map());
-  const jitter = (work) => {
-    const key = `${Math.round(work.year / 25) * 25}-${plotCategory(work)}`;
-    const group = groupPositions.get(key) || [work.id];
-    const index = group.indexOf(work.id);
-    const ring = Math.floor(index / 8);
-    const angle = ((index % 8) / 8) * Math.PI * 2 + ring * 0.42;
-    const radius = Math.min(52, 16 + ring * 10);
-    const maxYOffset = rowGap * 0.34;
-
-    return {
-      x: Math.cos(angle) * radius,
-      y: Math.max(-maxYOffset, Math.min(maxYOffset, Math.sin(angle) * radius * 0.95)),
-    };
-  };
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const applyFisheye = (point) => {
-    if (!fisheyeFocus) return point;
-
-    const dx = point.x - fisheyeFocus.x;
-    const dy = point.y - fisheyeFocus.y;
-    const distance = Math.hypot(dx, dy);
-    const radius = 95;
-
-    if (!distance || distance > radius) return point;
-
-    const strength = (1 - distance / radius) * 24;
-    const nx = dx / distance;
-    const ny = dy / distance;
-
+  const bubbleRadius = (count) => Math.min(34, 5 + Math.sqrt(count) * 4.4);
+  const clusters = [...works.reduce((acc, work) => {
+    const category = plotCategory(work);
+    const clusterYear = Math.round(work.year / 10) * 10;
+    const key = `${category}-${clusterYear}`;
+    if (!acc.has(key)) {
+      acc.set(key, { id: key, category, year: clusterYear, works: [] });
+    }
+    acc.get(key).works.push(work);
+    return acc;
+  }, new Map()).values()].map((cluster) => {
+    const meanYear = cluster.works.reduce((sum, work) => sum + work.year, 0) / cluster.works.length;
     return {
-      x: clamp(point.x + nx * strength, plot.left, plot.right),
-      y: clamp(point.y + ny * strength, plot.top, plot.bottom),
+      ...cluster,
+      year: meanYear,
+      count: cluster.works.length,
     };
-  };
+  });
+  const positionedClusters = categories.flatMap((category) => {
+    const rowClusters = clusters
+      .filter((cluster) => cluster.category === category)
+      .sort((a, b) => a.year - b.year || a.id.localeCompare(b.id));
+    const placed = [];
+    const yLimit = Math.min(yStep * 0.36, 24);
+    const yOffsets = [0, -0.3, 0.3, -0.6, 0.6, -1, 1].map((value) => value * yLimit);
+    const xOffsets = [0, 44, -44, 88, -88, 132, -132, 176, -176];
+
+    return rowClusters.map((cluster, index) => {
+      const radius = bubbleRadius(cluster.count);
+      const baseX = x(cluster.year);
+      const baseY = y(cluster.category);
+      const candidates = yOffsets.flatMap((yOffset) => xOffsets.map((xOffset) => ({
+        x: clamp(baseX + xOffset, plot.left + radius + 4, plot.right - radius - 4),
+        y: clamp(baseY + yOffset, plot.top + radius + 4, plot.bottom - radius - 4),
+      })));
+      const position = candidates.find((candidate) => placed.every((other) => {
+        const distance = Math.hypot(candidate.x - other.x, candidate.y - other.y);
+        return distance > radius + other.radius + 4;
+      })) || {
+        x: clamp(baseX + ((index % 7) - 3) * 36, plot.left + radius + 4, plot.right - radius - 4),
+        y: clamp(baseY + (((index % 9) - 4) / 4) * yLimit, plot.top + radius + 4, plot.bottom - radius - 4),
+      };
+      placed.push({ ...position, radius });
+      return { ...cluster, cx: position.x, cy: position.y, radius };
+    });
+  });
 
   return (
-    <svg className="scatter-svg" style={{ '--scatter-height': `${svgHeight}px` }} viewBox={`0 0 1800 ${svgHeight}`}>
+    <svg className="scatter-svg" style={{ '--scatter-height': `${svgHeight}px`, '--scatter-width': `${svgWidth}px` }} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
       {ticks.map((tick) => {
         const gx = x(tick);
         return <g key={tick}><line x1={gx} x2={gx} y1={plot.top} y2={plot.bottom} /><text x={gx} y={svgHeight - 34}>{formatYear(tick)}</text></g>;
       })}
-      {categories.map((cat) => <g key={cat}><line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} /><text x="214" y={y(cat) + 4}>{cat}</text></g>)}
-      <text className="axis-title" x="995" y={svgHeight - 8}>Object End Date</text>
-      {works.map((work, i) => {
-        const offset = jitter(work);
-        const basePoint = {
-          x: clamp(x(work.year) + offset.x, plot.left, plot.right),
-          y: clamp(y(plotCategory(work)) + offset.y, plot.top, plot.bottom),
-        };
-        const distortedPoint = applyFisheye(basePoint);
-        const cx = distortedPoint.x;
-        const cy = distortedPoint.y;
-        const isSelected = selected?.id === work.id;
+      {categories.map((cat) => <g key={cat}><line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} /><text x="234" y={y(cat) + 4}>{cat}</text></g>)}
+      <text className="axis-title" x="1195" y={svgHeight - 8}>Object End Date</text>
+      {positionedClusters.map((cluster) => {
+        const cx = cluster.cx;
+        const cy = cluster.cy;
+        const isSelected = selectedClusterId === cluster.id || cluster.works.some((work) => work.id === selectedArtworkId);
+        const radius = cluster.radius;
 
         return (
-          <g key={work.id} className="point-wrap">
-            {isSelected && <circle className="point-ring" cx={cx} cy={cy} r="17" />}
-            <circle className={isSelected ? 'point selected' : 'point'} cx={cx} cy={cy}
-              r={isSelected ? 8 : 5.5} fill={categoryColor(plotCategory(work))}
-              onMouseEnter={() => {
-                setFisheyeFocus(basePoint);
-                onHover(work);
-              }}
-              onMouseLeave={() => setFisheyeFocus(null)}
-              onFocus={() => {
-                setFisheyeFocus(basePoint);
-                onHover(work);
-              }}
-              onBlur={() => setFisheyeFocus(null)}
+          <g key={cluster.id} className="point-wrap">
+            {isSelected && <circle className="point-ring" cx={cx} cy={cy} r={radius + 8} />}
+            <circle className={isSelected ? 'point selected bubble-point' : 'point bubble-point'} cx={cx} cy={cy}
+              r={isSelected ? radius + 2 : radius} fill={categoryColor(cluster.category)}
+              onMouseEnter={() => onSelectCluster(cluster, false)}
+              onClick={() => onSelectCluster(cluster, true)}
+              onFocus={() => onSelectCluster(cluster, false)}
               tabIndex="0" />
+            {cluster.count > 1 && <text className="bubble-count" x={cx} y={cy + 4}>{cluster.count}</text>}
           </g>
         );
       })}
@@ -503,21 +506,62 @@ function ArtworkDetailCard({ artwork, onClose }) {
   );
 }
 
+function TimelineClusterList({ cluster, onClose, selectedArtworkId }) {
+  if (!cluster) return null;
+
+  return (
+    <aside className="art-list timeline-cluster-list">
+      <div className="panel-head">
+        <h2>{cluster.works.length > 1 ? `${cluster.works.length} Works` : 'Selected Work'}</h2>
+        <button className="close" onClick={onClose}>×</button>
+      </div>
+      <p className="cluster-meta">{cluster.category} · around {cluster.year < 0 ? `${Math.round(Math.abs(cluster.year))} BCE` : `AD ${Math.round(cluster.year)}`}</p>
+      {cluster.works.map((work) => (
+        <ArtworkListItem key={work.id} artwork={work} selected={work.id === selectedArtworkId} />
+      ))}
+    </aside>
+  );
+}
+
 function TimelineViewer({ target }) {
   const [range, setRange] = useState([-5000, 2000]);
   const [groupBy, setGroupBy] = useState('department');
-  const [hovered, setHovered] = useState(null);
+  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [selectedArtworkId, setSelectedArtworkId] = useState(null);
+  const [pinnedCluster, setPinnedCluster] = useState(false);
 
   useEffect(() => {
     if (!target) return;
     const padding = Math.max(150, Math.round(Math.abs(target.year) * 0.08));
     setRange([Math.max(-5000, target.year - padding), Math.min(2000, target.year + padding)]);
     setGroupBy('department');
-    setHovered(target);
+    setSelectedArtworkId(target.id);
+    setSelectedCluster({
+      id: `search-${target.id}`,
+      category: target.department,
+      year: target.year,
+      count: 1,
+      works: [target],
+    });
+    setPinnedCluster(true);
   }, [target]);
 
   const filtered = useMemo(() => timelineArtworks.filter((work) => work.year >= range[0] && work.year <= range[1]), [range]);
-  const activeHover = hovered && filtered.some((work) => work.id === hovered.id) ? hovered : null;
+  const activeCluster = selectedCluster && selectedCluster.works.some((clusterWork) => filtered.some((work) => work.id === clusterWork.id))
+    ? selectedCluster
+    : null;
+  const chooseCluster = (cluster, pin = false) => {
+    if (pin && pinnedCluster && selectedCluster?.id === cluster.id) {
+      setSelectedCluster(null);
+      setSelectedArtworkId(null);
+      setPinnedCluster(false);
+      return;
+    }
+    if (pinnedCluster && !pin) return;
+    setSelectedCluster(cluster);
+    setSelectedArtworkId(null);
+    setPinnedCluster(pin);
+  };
 
   return (
     <main className="dashboard">
@@ -526,15 +570,32 @@ function TimelineViewer({ target }) {
         <RangeSlider range={range} setRange={setRange} />
         <div className="filter-buttons">
           {['department', 'classification', 'culture'].map((filter) => (
-            <button key={filter} className={groupBy === filter ? 'active' : ''} onClick={() => setGroupBy(filter)}>{filter}</button>
+            <button key={filter} className={groupBy === filter ? 'active' : ''} onClick={() => {
+              setGroupBy(filter);
+              setSelectedCluster(null);
+              setSelectedArtworkId(null);
+              setPinnedCluster(false);
+            }}>{filter}</button>
           ))}
         </div>
       </section>
-      <section className={activeHover ? 'timeline-layout has-detail' : 'timeline-layout'}>
+      <section className={activeCluster ? 'timeline-layout has-detail' : 'timeline-layout'}>
         <ChartPanel title={`${groupBy} timeline`}>
-          <ScatterPlot works={filtered} groupBy={groupBy} range={range} onHover={setHovered} selected={activeHover} />
+          <ScatterPlot
+            works={filtered}
+            categoryWorks={timelineArtworks}
+            groupBy={groupBy}
+            range={range}
+            onSelectCluster={chooseCluster}
+            selectedClusterId={activeCluster?.id}
+            selectedArtworkId={selectedArtworkId}
+          />
         </ChartPanel>
-        {activeHover && <ArtworkDetailCard artwork={activeHover} onClose={() => setHovered(null)} />}
+        {activeCluster && <TimelineClusterList cluster={activeCluster} selectedArtworkId={selectedArtworkId} onClose={() => {
+          setSelectedCluster(null);
+          setSelectedArtworkId(null);
+          setPinnedCluster(false);
+        }} />}
       </section>
     </main>
   );

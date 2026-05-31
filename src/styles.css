@@ -640,15 +640,66 @@ a {
   height: 30px;
 }
 
+.range-track,
+.range-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 12px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.range-track {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.range-fill {
+  right: auto;
+  background: var(--red);
+  box-shadow: 0 0 12px rgba(237, 0, 43, 0.36);
+}
+
 .dual-range input {
   position: absolute;
   width: 100%;
+  height: 30px;
+  margin: 0;
   pointer-events: none;
-  accent-color: var(--red);
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dual-range input::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+}
+
+.dual-range input::-moz-range-track {
+  height: 6px;
   background: transparent;
 }
 
 .dual-range input::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: var(--red);
+  pointer-events: auto;
+  cursor: grab;
+  appearance: none;
+  -webkit-appearance: none;
+  margin-top: -6px;
+}
+
+.dual-range input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: var(--red);
   pointer-events: auto;
   cursor: grab;
 }
@@ -686,12 +737,12 @@ a {
 }
 
 .timeline-layout .chart-panel {
-  max-height: clamp(560px, calc(100vh - 236px), 760px);
+  max-height: none;
   overflow: auto;
 }
 
 .scatter-svg {
-  width: 100%;
+  width: var(--scatter-width, 100%);
   height: var(--scatter-height);
   min-width: 1000px;
   display: block;
@@ -730,6 +781,18 @@ a {
   stroke: white;
   stroke-width: 2.5;
   filter: none;
+}
+
+.bubble-point {
+  fill-opacity: 0.68;
+}
+
+.bubble-count {
+  fill: white;
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
 }
 
 .detail-card {
@@ -923,6 +986,26 @@ a {
 .art-list {
   max-height: clamp(466px, calc(100vh - 236px), 720px);
   overflow: auto;
+}
+
+.timeline-cluster-list {
+  padding: 16px;
+}
+
+.timeline-cluster-list .close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+  cursor: pointer;
+}
+
+.cluster-meta {
+  margin: -2px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .art-list-item {

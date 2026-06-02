@@ -159,6 +159,7 @@ export const endDateBins = (() => {
   return bins;
 })();
 
+export const allArtworks = metRows.map(toArtwork);
 export const timelineArtworks = datedRows.map(toArtwork);
 
 export const departments = [

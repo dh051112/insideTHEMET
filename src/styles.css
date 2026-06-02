@@ -49,11 +49,11 @@ a {
 }
 
 .met-nav {
-  min-height: 78px;
+  min-height: 88px;
   display: grid;
-  grid-template-columns: 280px minmax(440px, 1fr) 330px;
+  grid-template-columns: 218px minmax(520px, 1fr) 330px;
   align-items: center;
-  gap: 20px;
+  gap: 28px;
   padding: 0 4.5vw;
   background: var(--red);
 }
@@ -61,23 +61,27 @@ a {
 .brand {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: white;
   cursor: pointer;
 }
 
-.brand span {
-  font-family: Georgia, serif;
+.brand-prefix {
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 31px;
   font-weight: 700;
+  line-height: 1;
 }
 
-.brand strong {
-  font-family: Georgia, serif;
-  font-size: 32px;
-  line-height: 0.74;
+.brand-mark {
+  display: block;
+  width: 86px;
+  height: auto;
+  object-fit: contain;
 }
 
 .tab-row {
@@ -88,9 +92,9 @@ a {
 
 .tab {
   position: relative;
-  min-width: 220px;
+  min-width: 0;
+  padding: 0 34px;
   border: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.65);
   background: transparent;
   color: white;
   text-transform: lowercase;
@@ -98,8 +102,14 @@ a {
   cursor: pointer;
 }
 
-.tab:first-child {
-  border-left: 0;
+.tab::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 24px;
+  bottom: 24px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .tab::after {

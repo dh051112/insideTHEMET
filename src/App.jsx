@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import metLogo from '../logo.png';
 import {
   classificationCounts,
   departmentCounts,
@@ -9,6 +10,7 @@ import {
   galleryArtworks,
   sectionByRoom,
   summaryStats,
+  allArtworks,
   endDateBins,
   timelineArtworks,
 } from './mockData.js';
@@ -155,7 +157,7 @@ function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap, favoritesCo
     const term = query.trim().toLowerCase();
     if (!term) return [];
 
-    return timelineArtworks
+    return allArtworks
       .filter((artwork) => [
         artwork.title,
         artwork.artist,
@@ -164,8 +166,7 @@ function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap, favoritesCo
         artwork.culture,
         artwork.medium,
         artwork.accession,
-      ].join(' ').toLowerCase().includes(term))
-      .slice(0, 8);
+      ].join(' ').toLowerCase().includes(term));
   }, [query]);
 
   useEffect(() => {
@@ -183,8 +184,8 @@ function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap, favoritesCo
     <header className="site-header">
       <nav className="met-nav">
         <button type="button" className="brand" onClick={() => onTabChange('summary')}>
-          <span>inside</span>
-          <strong>THE<br />MET</strong>
+          <span className="brand-prefix">inside</span>
+          <img className="brand-mark" src={metLogo} alt="The Met" />
         </button>
 
         <div className="tab-row">

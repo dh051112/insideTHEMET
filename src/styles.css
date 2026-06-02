@@ -128,7 +128,7 @@ a {
   color: #111;
 }
 
-search-box input {
+.search-box input {
   min-width: 0;
   border: 0;
   outline: 0;
@@ -1178,7 +1178,7 @@ search-box input {
   transform: translateY(-1px);
 }
 
-.favorite-header-button span {
+.favorite-header-button span:not(.fav-star) {
   position: absolute;
   right: -5px;
   bottom: -5px;
@@ -1194,6 +1194,12 @@ search-box input {
   color: white;
   font-size: 11px;
   font-weight: 700;
+}
+
+.fav-star {
+  display: block;
+  line-height: 1;
+  transform: translateY(-4px);
 }
 
 .favorite-toggle {

@@ -208,7 +208,7 @@ function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap, favoritesCo
             aria-label="Open favorites"
             title="Open favorites"
           >
-            ★
+            <span className="fav-star">★</span>
             {favoritesCount > 0 && <span>{favoritesCount}</span>}
           </button>
 

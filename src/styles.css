@@ -5,7 +5,7 @@
   --line: rgba(185, 211, 224, 0.16);
   --text: #f4f7f8;
   --muted: #a6b0b6;
-  --red: #ed002b;
+  --red: #E4022B;
   --red-glow: rgba(237, 0, 43, 0.5);
   --cyan: #42e8ff;
 }
@@ -143,12 +143,17 @@ a {
   border: 0;
   outline: 0;
   color: #222;
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .search-box span {
-  font-size: 35px;
-  line-height: 0.7;
+  display: flex;          
+  align-items: center;    
+  justify-content: center;
+  font-size: 32px;        
+  line-height: 1;      
+  color: #666;
+  margin-top: -6px;
 }
 
 .search-popover {
@@ -1257,7 +1262,7 @@ a {
   transform: translateY(-1px);
 }
 
-.favorite-header-button span {
+.favorite-header-button span:not(.fav-star) {
   position: absolute;
   right: -5px;
   bottom: -5px;
@@ -1273,6 +1278,11 @@ a {
   color: white;
   font-size: 11px;
   font-weight: 700;
+}
+.fav-star {
+  display: block;
+  line-height: 1;
+  transform: translateY(-4px);
 }
 
 .favorite-toggle {

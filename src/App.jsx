@@ -2,18 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import metLogo from '../logo.png';
 import {
-  classificationCounts,
   departmentCounts,
-  floorPlans,
-  floorRooms,
-  floorSections,
   galleryArtworks,
-  sectionByRoom,
   summaryStats,
   allArtworks,
-  endDateBins,
   timelineArtworks,
 } from './mockData.js';
+import {
+  departmentFloor,
+  deptColor,
+  floorplanFloors,
+  floorplanViewBox,
+  galleryLocation,
+  getRoomMapSvg,
+  pathCentroid,
+  resolveDepartment,
+} from './floorplan.js';
 
 const tabs = [
   ['summary', 'home'],
@@ -413,49 +417,69 @@ function Histogram({ data }) {
 function FloorSelector({ activeFloor, onFloorChange }) {
   return (
     <div className="floor-selector">
-      {floorPlans.map((plan) => (
+      {floorplanFloors.map((floor) => (
         <button
           type="button"
-          key={plan.id}
-          className={activeFloor === plan.id ? 'active' : ''}
+          key={floor.id}
+          className={activeFloor === floor.id ? 'active' : ''}
           onClick={(event) => {
             event.stopPropagation();
-            onFloorChange(plan.id);
+            onFloorChange(floor.id);
           }}
         >
-          <strong>{plan.label}</strong>
-          <span>{plan.note}</span>
+          <strong>{floor.label}</strong>
+          <span>{floor.departments.length} departments</span>
         </button>
       ))}
     </div>
   );
 }
 
-function FloorOverviewMap({ activeFloor, selected, onSelect, compact = false }) {
-  const visibleSections = floorSections.filter((section) => section.floor === activeFloor);
+// 개요 도면: 외벽 + 부서 경계 폴리곤. 부서 클릭 시 세부 방 도면으로 진입.
+const shortDeptLabel = (name) => {
+  if (name.length <= 24) return name;
+  const comma = name.split(',')[0];
+  if (comma.length <= 28) return comma;
+  return `${name.slice(0, 22)}…`;
+};
+
+function DepartmentFloorMap({ floor, selectedDept, onSelectDept }) {
+  const data = floorplanFloors.find((item) => item.id === floor);
+  if (!data) return null;
 
   return (
-    <svg className={compact ? 'map-svg compact' : 'map-svg'} viewBox="0 0 1160 520" role="img" aria-label="Museum floor overview">
-      <rect className="building-outline" x="64" y="34" width="1032" height="438" rx="34" />
-      <path className="floor-spine" d="M116 382 C250 322 342 388 478 314 S730 218 1040 306" />
-      <rect className="great-hall" x="488" y="376" width="184" height="78" rx="18" />
-      <text className="hall-label" x="580" y="416">Great Hall</text>
-      <text className="facade-label" x="580" y="494">Fifth Avenue Entrance / 82nd Street</text>
+    <svg className="floorplan-svg" viewBox={floorplanViewBox} role="img" aria-label={`${data.label} department map`}>
+      <path className="floorplan-wall" d={data.outerWall} />
+      {data.departments.map((dept) => {
+        const color = deptColor(dept.department);
+        const active = selectedDept === dept.department;
+        const [cx, cy] = pathCentroid(dept.paths[0]);
 
-      {visibleSections.map((section) => (
-        <g
-          key={section.id}
-          className={selected === section.id ? 'map-room active' : 'map-room'}
-          onClick={(event) => {
-            event.stopPropagation();
-            onSelect(section.id);
-          }}
-        >
-          <rect x={section.x} y={section.y} width={section.w} height={section.h} rx="16" />
-          <text x={section.x + section.w / 2} y={section.y + section.h / 2 - 8}>{section.label}</text>
-          <text className="room-subtitle" x={section.x + section.w / 2} y={section.y + section.h / 2 + 18}>{section.subtitle}</text>
-        </g>
-      ))}
+        return (
+          <g
+            key={dept.department}
+            className={active ? 'floorplan-dept active' : 'floorplan-dept'}
+            style={{ '--dept-color': color }}
+            role="button"
+            tabIndex="0"
+            aria-label={dept.department}
+            onClick={() => onSelectDept(dept.department)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onSelectDept(dept.department);
+              }
+            }}
+          >
+            {dept.paths.map((d, index) => (
+              <path key={index} className="floorplan-dept-shape" d={d} />
+            ))}
+            <text className="floorplan-dept-label" x={cx} y={cy} textAnchor="middle">
+              {shortDeptLabel(dept.department)}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -1039,27 +1063,38 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
   );
 }
 
-function FloorDetailMap({ floor, selectedRoom, onRoomSelect }) {
-  const baseRooms = floorRooms[floor] || [];
-  const rooms = selectedRoom && !baseRooms.includes(selectedRoom) ? [selectedRoom, ...baseRooms] : baseRooms;
+// 세부 도면: 부서별로 미리 그려진 방 단위 SVG 문자열을 그대로 렌더하고,
+// 클릭/하이라이트는 data-gallery 속성을 통해 위임 처리한다.
+function RoomDetailMap({ svg, selectedRoom, onRoomSelect, galleriesWithWorks }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    root.querySelectorAll('[data-gallery]').forEach((node) => {
+      const gallery = node.getAttribute('data-gallery');
+      const hasWorks = galleriesWithWorks.has(gallery);
+      node.classList.toggle('has-works', hasWorks);
+      node.classList.toggle('empty', !hasWorks);
+      node.classList.toggle('selected', gallery === selectedRoom);
+    });
+  }, [svg, selectedRoom, galleriesWithWorks]);
+
+  const handleClick = (event) => {
+    const node = event.target.closest?.('[data-gallery]');
+    if (!node) return;
+    const gallery = node.getAttribute('data-gallery');
+    if (galleriesWithWorks.has(gallery)) onRoomSelect(gallery);
+  };
 
   return (
-    <svg className="map-svg detail" viewBox="0 0 650 720" role="img" aria-label="Gallery rooms">
-      {rooms.map((room, i) => {
-        const col = i % 4;
-        const row = Math.floor(i / 4);
-        const x = 32 + col * 150;
-        const y = 34 + row * 88;
-        const count = galleryArtworks[room]?.length || 0;
-        return (
-          <g key={room} className={selectedRoom === room ? 'map-room active' : 'map-room'} onClick={() => onRoomSelect(room)}>
-            <rect x={x} y={y} width="118" height="64" rx="12" />
-            <text x={x + 59} y={y + 27}>{room}</text>
-            <text className="room-subtitle" x={x + 59} y={y + 47}>{count} works</text>
-          </g>
-        );
-      })}
-    </svg>
+    <div
+      ref={containerRef}
+      className="room-detail-map"
+      onClick={handleClick}
+      // 데이터는 신뢰할 수 있는 로컬 도면 파일이며, 사용자 입력이 아니다.
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   );
 }
 
@@ -1085,11 +1120,16 @@ function ArtworkListItem({ artwork, selected, isFavorite, onToggleFavorite }) {
   );
 }
 
-function ArtworkList({ room, selectedArtworkId, isFavorite, onToggleFavorite }) {
+function ArtworkList({ room, selectedArtworkId, isFavorite, onToggleFavorite, onBack }) {
   const works = galleryArtworks[room] || timelineArtworks.slice(0, 4);
 
   return (
     <aside className="art-list">
+      {onBack && (
+        <button type="button" className="art-list-back" onClick={onBack}>
+          <span aria-hidden="true">←</span> Back to the map
+        </button>
+      )}
       <div className="panel-head">
         <h2>Room {room}</h2>
         <span>{works.length} works</span>
@@ -1108,52 +1148,70 @@ function ArtworkList({ room, selectedArtworkId, isFavorite, onToggleFavorite }) 
 }
 
 function GalleryMap({ target, isFavorite, onToggleFavorite }) {
-  const [activeFloor, setActiveFloor] = useState('floor-1');
-  const [floor, setFloor] = useState(null);
+  const [activeFloor, setActiveFloor] = useState('1');
+  const [selectedDept, setSelectedDept] = useState(null);
   const [room, setRoom] = useState(null);
   const [selectedArtworkId, setSelectedArtworkId] = useState(null);
 
+  // 실제 작품이 있는 갤러리(방)만 클릭/하이라이트 대상이 된다.
+  const galleriesWithWorks = useMemo(
+    () => new Set(Object.keys(galleryArtworks).filter((gallery) => (galleryArtworks[gallery] || []).length > 0)),
+    [],
+  );
+
   useEffect(() => {
     if (!target) return;
-    setActiveFloor(target.floorId || 'floor-1');
-    setFloor(target.sectionId || null);
+    setActiveFloor(target.floorId || '1');
+    setSelectedDept(target.department || null);
     setRoom(target.room || null);
     setSelectedArtworkId(target.artworkId || null);
   }, [target]);
 
-  const chooseMapFloor = (id) => {
-    setActiveFloor(id);
-    setFloor(null);
-    setRoom(null);
-    setSelectedArtworkId(null);
-  };
-
   const chooseFloor = (id) => {
-    setFloor(id);
+    setActiveFloor(id);
+    setSelectedDept(null);
     setRoom(null);
     setSelectedArtworkId(null);
   };
 
-  const selectedFloor = floorSections.find((section) => section.id === floor);
+  const chooseDept = (department) => {
+    setSelectedDept(department);
+    setRoom(null);
+    setSelectedArtworkId(null);
+  };
+
+  const floorMeta = floorplanFloors.find((item) => item.id === activeFloor);
+  const roomSvg = selectedDept ? getRoomMapSvg(activeFloor, selectedDept) : null;
 
   return (
     <>
-      <PageTitle title="Gallery Map" subtitle="Select a floor, choose a section, and browse artworks by gallery room." />
-      <FloorSelector activeFloor={activeFloor} onFloorChange={chooseMapFloor} />
-      <section className={room ? 'gallery-layout has-list' : floor ? 'gallery-layout has-rooms' : 'gallery-layout'}>
-        <ChartPanel title={selectedFloor?.label || 'Floor Overview'} headerExtra={floorPlans.find((plan) => plan.id === activeFloor)?.label}>
-          <FloorOverviewMap activeFloor={activeFloor} selected={floor} onSelect={chooseFloor} />
-        </ChartPanel>
-        {floor && (
-          <ChartPanel title="Rooms" headerExtra={selectedFloor?.subtitle}>
-            <FloorDetailMap
-              floor={floor}
-              selectedRoom={room}
-              onRoomSelect={(nextRoom) => {
-                setRoom(nextRoom);
-                setSelectedArtworkId(null);
-              }}
-            />
+      <PageTitle title="Gallery Map" subtitle="Select a floor, choose a department, then browse artworks room by room." />
+      <FloorSelector activeFloor={activeFloor} onFloorChange={chooseFloor} />
+      <section className={room ? 'gallery-layout has-list' : selectedDept ? 'gallery-layout has-rooms' : 'gallery-layout'}>
+        {/* 방을 선택하면 메인 층 도면은 숨기고 방 도면 + 작품 목록만 보여준다. */}
+        {!room && (
+          <ChartPanel
+            title={floorMeta?.label || 'Floor Overview'}
+            headerExtra={selectedDept || `${floorMeta?.departments.length || 0} departments`}
+          >
+            <DepartmentFloorMap floor={activeFloor} selectedDept={selectedDept} onSelectDept={chooseDept} />
+          </ChartPanel>
+        )}
+        {selectedDept && (
+          <ChartPanel title={selectedDept} headerExtra={roomSvg ? 'Rooms' : 'No room map'}>
+            {roomSvg ? (
+              <RoomDetailMap
+                svg={roomSvg}
+                selectedRoom={room}
+                galleriesWithWorks={galleriesWithWorks}
+                onRoomSelect={(nextRoom) => {
+                  setRoom(nextRoom);
+                  setSelectedArtworkId(null);
+                }}
+              />
+            ) : (
+              <div className="map-empty-note">No detailed room map for this department.</div>
+            )}
           </ChartPanel>
         )}
         {room && (
@@ -1162,6 +1220,10 @@ function GalleryMap({ target, isFavorite, onToggleFavorite }) {
             selectedArtworkId={selectedArtworkId}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
+            onBack={() => {
+              setRoom(null);
+              setSelectedArtworkId(null);
+            }}
           />
         )}
       </section>
@@ -1250,26 +1312,18 @@ export default function App() {
     });
   };
 
-  const openGalleryMap = (floorId = 'floor-1', sectionId = null) => {
-    setGalleryTarget({ floorId, sectionId, requestedAt: Date.now() });
-    setActiveTab('map');
-  };
-
   // Home에서 시대 막대 클릭 → Timeline 페이지로 범위 적용해서 이동
   const jumpToTimelineRange = (minYear, maxYear) => {
     setTimelineTarget({ rangeOnly: true, minYear, maxYear, requestedAt: Date.now() });
     setActiveTab('timeline');
   };
 
-  // Home에서 부서 박스 클릭 → Gallery 페이지로 해당 부서 선택해서 이동
+  // Home에서 부서 박스 클릭 → Gallery 페이지로 해당 부서 도면을 펼쳐서 이동
   const jumpToDepartment = (departmentName) => {
-    const section = floorSections.find((s) => s.departments.some((d) =>
-      d === departmentName || d.replace(/^The /, '') === departmentName
-    ));
-
+    const resolved = resolveDepartment(departmentName);
     setGalleryTarget({
-      floorId: section?.floor || 'floor-1',
-      sectionId: section?.id || null,
+      floorId: (resolved && departmentFloor[resolved]) || '1',
+      department: resolved,
       requestedAt: Date.now(),
     });
     setActiveTab('map');
@@ -1280,12 +1334,15 @@ export default function App() {
     setActiveTab('timeline');
   };
 
+  // 작품 → Gallery 페이지: 갤러리 번호로 층/부서/방을 찾아 해당 방까지 펼친다.
   const jumpToMap = (artwork) => {
-    const location = sectionByRoom[artwork.galleryNumber] || {};
+    const gallery = artwork.galleryNumber;
+    const location = galleryLocation[gallery];
+    const resolvedDept = location?.department || resolveDepartment(artwork.department);
     setGalleryTarget({
-      floorId: location.floorId || 'floor-1',
-      sectionId: location.sectionId || null,
-      room: artwork.galleryNumber || null,
+      floorId: location?.floor || (resolvedDept && departmentFloor[resolvedDept]) || '1',
+      department: resolvedDept || null,
+      room: location ? gallery : null,
       artworkId: artwork.id,
       requestedAt: Date.now(),
     });

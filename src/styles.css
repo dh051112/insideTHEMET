@@ -1046,94 +1046,153 @@ a {
 }
 
 .gallery-layout.has-list {
-  grid-template-columns: minmax(0, 1.02fr) minmax(330px, 0.76fr) 460px;
+  grid-template-columns: minmax(0, 1fr) 460px;
 }
 
-.map-svg {
+/* 개요 도면: 외벽 + 부서 경계 폴리곤 (다크 배경 위) */
+.floorplan-svg {
   width: 100%;
   height: clamp(430px, calc(100vh - 280px), 720px);
 }
 
-.map-svg path {
-  stroke: rgba(255, 255, 255, 0.16);
-  stroke-width: 7;
+.floorplan-wall {
+  fill: rgba(255, 255, 255, 0.02);
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
 }
 
-.building-outline {
-  fill: rgba(255, 255, 255, 0.025);
-  stroke: rgba(255, 255, 255, 0.2);
-  stroke-width: 3;
+.floorplan-dept {
+  cursor: pointer;
+  outline: none;
 }
 
-.floor-spine {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.16);
-  stroke-width: 10;
-  stroke-linecap: round;
-}
-
-.great-hall {
-  fill: rgba(255, 255, 255, 0.04);
-  stroke: rgba(255, 255, 255, 0.22);
+.floorplan-dept-shape {
+  fill: var(--dept-color);
+  fill-opacity: 0.22;
+  stroke: var(--dept-color);
   stroke-width: 2;
+  stroke-linejoin: round;
+  transition: fill-opacity 180ms ease, filter 180ms ease, stroke-width 180ms ease;
 }
 
-.hall-label {
-  fill: #dfe8eb;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  font-size: 18px;
+.floorplan-dept:hover .floorplan-dept-shape,
+.floorplan-dept:focus-visible .floorplan-dept-shape {
+  fill-opacity: 0.4;
+  filter: drop-shadow(0 0 10px var(--dept-color));
+}
+
+.floorplan-dept.active .floorplan-dept-shape {
+  fill-opacity: 0.55;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 14px var(--dept-color));
+}
+
+.floorplan-dept-label {
+  fill: #f4f7f8;
+  font-size: 11px;
   font-weight: 700;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(6, 12, 16, 0.88);
+  stroke-width: 2.6px;
+  stroke-linejoin: round;
 }
 
-.facade-label {
-  fill: #87949a;
-  text-anchor: middle;
-  font-size: 13px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+/* 세부 도면: 부서별 방 단위 도면 (다크 테마에 맞춰 색 오버라이드) */
+.room-detail-map {
+  width: 100%;
+  height: clamp(430px, calc(100vh - 280px), 720px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.015);
 }
 
-.map-room {
+.room-detail-map svg {
+  width: 100%;
+  height: 100%;
+}
+
+.room-detail-map .room {
+  transition: filter 180ms ease, opacity 180ms ease;
+}
+
+/* 방 칸: 부서색은 테두리로 유지하되 채움은 옅게 (어두운 배경 위에서 보이도록) */
+.room-detail-map .room rect {
+  fill-opacity: 0.16;
+  stroke-width: 1.5;
+  transition: fill-opacity 180ms ease, filter 180ms ease;
+}
+
+/* 방 번호 텍스트: 도면에 입혀진 짙은 색을 밝은 테마 색으로 덮어쓴다 */
+.room-detail-map .room text {
+  fill: #eef4f6;
+}
+
+.room-detail-map .room.has-works {
   cursor: pointer;
 }
 
-.map-room rect {
-  fill: rgba(6, 17, 25, 0.9);
-  stroke: rgba(240, 248, 252, 0.25);
-  stroke-width: 2;
-  transition: fill 180ms ease, stroke 180ms ease, filter 180ms ease;
+.room-detail-map .room.has-works rect {
+  fill-opacity: 0.24;
 }
 
-.map-room text {
-  fill: #eef4f6;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  font-size: 18px;
-  pointer-events: none;
+.room-detail-map .room.empty {
+  opacity: 0.32;
+  cursor: default;
 }
 
-.map-room .room-subtitle {
-  fill: #a9b4b9;
-  font-size: 12px;
-  font-weight: 400;
+.room-detail-map .room.has-works:hover rect {
+  fill-opacity: 0.45;
+  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.3));
 }
 
-.map-room:hover rect,
-.map-room.active rect {
-  fill: rgba(237, 0, 43, 0.16);
+.room-detail-map .room.selected rect {
+  fill: var(--red);
+  fill-opacity: 0.28;
   stroke: var(--red);
-  filter: drop-shadow(0 0 12px var(--red-glow));
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 10px var(--red-glow));
 }
 
-.map-svg.detail .map-room text {
-  font-size: 23px;
-  font-weight: 700;
+.room-detail-map .room.selected text {
+  fill: #fff;
 }
 
-.map-svg.detail .map-room .room-subtitle {
-  font-size: 11px;
-  font-weight: 400;
+.map-empty-note {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.art-list-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.art-list-back span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.art-list-back:hover {
+  border-color: var(--red);
+  background: rgba(237, 0, 43, 0.12);
+  box-shadow: 0 0 12px var(--red-glow);
 }
 
 .art-list {

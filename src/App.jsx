@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import metLogo from '../logo.png';
 import {
   classificationCounts,
   departmentCounts,
@@ -10,13 +9,12 @@ import {
   galleryArtworks,
   sectionByRoom,
   summaryStats,
-  allArtworks,
   endDateBins,
   timelineArtworks,
 } from './mockData.js';
 
 const tabs = [
-  ['summary', 'home'],
+  ['summary', 'collection summary'],
   ['timeline', 'timeline viewer'],
   ['map', 'gallery map'],
 ];
@@ -26,20 +24,6 @@ const categoryPalette = [
   '#ff4fd8', '#5b8cff', '#c8ff2e', '#ff9f9f', '#00b38f', '#f2f5ff',
   '#c84b31', '#72ffcf', '#a06bff', '#ffcc8a', '#16a3ff', '#f4ff78',
   '#ff5c77', '#4be04b', '#9ad7ff', '#ff8a00', '#d778ff', '#b8f000',
-];
-
-// Timeline 페이지 축 구간과 동일하게 맞춤
-const TIMELINE_BINS = [
-  [-5000, -1000],
-  [-1000, 0],
-  [0, 250],
-  [250, 500],
-  [500, 750],
-  [750, 1000],
-  [1000, 1250],
-  [1250, 1500],
-  [1500, 1750],
-  [1750, 2000],
 ];
 
 const FAVORITES_STORAGE_KEY = 'inside-the-met-favorites';
@@ -171,7 +155,7 @@ function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap, favoritesCo
     const term = query.trim().toLowerCase();
     if (!term) return [];
 
-    return allArtworks
+    return timelineArtworks
       .filter((artwork) => [
         artwork.title,
         artwork.artist,
@@ -180,7 +164,8 @@ function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap, favoritesCo
         artwork.culture,
         artwork.medium,
         artwork.accession,
-      ].join(' ').toLowerCase().includes(term));
+      ].join(' ').toLowerCase().includes(term))
+      .slice(0, 8);
   }, [query]);
 
   useEffect(() => {
@@ -198,8 +183,8 @@ function Header({ activeTab, onTabChange, onJumpTimeline, onJumpMap, favoritesCo
     <header className="site-header">
       <nav className="met-nav">
         <button type="button" className="brand" onClick={() => onTabChange('summary')}>
-          <span className="brand-prefix">inside</span>
-          <img className="brand-mark" src={metLogo} alt="The Met" />
+          <span>inside</span>
+          <strong>THE<br />MET</strong>
         </button>
 
         <div className="tab-row">
@@ -265,7 +250,7 @@ function MetricCard({ icon, value, label, note }) {
     <article className="metric-card">
       <div className="metric-icon">{icon}</div>
       <div>
-        <strong>{typeof value === 'number' ? value.toLocaleString() : value}</strong>
+        <strong>{Number(value).toLocaleString()}</strong>
         <h3>{label}</h3>
         <p>{note}</p>
       </div>
@@ -278,7 +263,7 @@ function ChartPanel({ title, children, footer, headerExtra }) {
     <section className="chart-panel">
       <div className="panel-head">
         <h2>{title}</h2>
-        <span>{headerExtra || 'ⓘ'}</span>
+        <div className="panel-head-extra">{headerExtra || 'ⓘ'}</div>
       </div>
       {children}
       {footer && <div className="panel-footer">{footer}</div>}
@@ -460,156 +445,54 @@ function FloorOverviewMap({ activeFloor, selected, onSelect, compact = false }) 
   );
 }
 
-function TimelinePreview({ onJumpTimeline, onOpenTimeline }) {
-  const [hoveredBin, setHoveredBin] = useState(null);
+function SummaryMapPreview({ onOpenMap }) {
+  const [activeFloor, setActiveFloor] = useState('floor-1');
 
-  const bins = useMemo(() => {
-    return TIMELINE_BINS.map(([start, end]) => {
-      const count = timelineArtworks.filter((w) => w.year >= start && w.year < end).length;
-      return { start, end, count };
-    });
-  }, []);
-
-  const formatYear = (y) => {
-    if (y < 0) return `BC ${Math.abs(y)}`;
-    if (y === 0) return '0';
-    return `AD ${y}`;
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpenMap(activeFloor);
+    }
   };
 
-  const max = Math.max(...bins.map((b) => b.count));
-  const width = 520;
-  const height = 240;
-  const padding = { top: 36, right: 16, bottom: 56, left: 16 };
-  const plotW = width - padding.left - padding.right;
-  const plotH = height - padding.top - padding.bottom;
-  const gap = 4;
-  const barW = (plotW - gap * (bins.length - 1)) / bins.length;
-
-  const hoveredLabel = hoveredBin !== null
-    ? `${formatYear(bins[hoveredBin].start)} – ${formatYear(bins[hoveredBin].end)} · ${bins[hoveredBin].count} works`
-    : 'Hover and click a bar to filter by period';
-
   return (
-    <section className="preview-card preview-timeline">
-      <div className="preview-head">
-        <div>
-          <h2>Timeline Viewer</h2>
-          <p>{timelineArtworks.length} works · click any period below</p>
-        </div>
-        <button type="button" className="preview-explore-btn" onClick={onOpenTimeline}>
-          Explore timeline <span>→</span>
-        </button>
+    <button
+      type="button"
+      className="summary-map-panel"
+      onClick={() => onOpenMap(activeFloor)}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="panel-head">
+        <h2>Met-Inspired Gallery Sections</h2>
+        <span>Open gallery map</span>
       </div>
-
-      <div className="preview-hover-label-html">{hoveredLabel}</div>
-
-      <svg className="preview-chart" viewBox={`0 0 ${width} ${height}`}>
-        {bins.map((bin, i) => {
-          const x = padding.left + i * (barW + gap);
-          const h = bin.count > 0 ? Math.max(4, (bin.count / max) * plotH) : 2;
-          const y = padding.top + plotH - h;
-          const isHovered = hoveredBin === i;
-
-          return (
-            <g
-              key={`${bin.start}-${bin.end}`}
-              className={isHovered ? 'preview-bar-group hovered' : 'preview-bar-group'}
-              onMouseEnter={() => setHoveredBin(i)}
-              onMouseLeave={() => setHoveredBin(null)}
-              onClick={() => onJumpTimeline(bin.start, bin.end)}
-              tabIndex="0"
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onJumpTimeline(bin.start, bin.end)}
-            >
-              <rect className="preview-bar-hitbox" x={x - gap / 2} y={padding.top} width={barW + gap} height={plotH} />
-              <rect className="preview-bar" x={x} y={y} width={barW} height={h} rx="2" />
-              {isHovered && (
-                <text className="preview-bar-count" x={x + barW / 2} y={y - 10} textAnchor="middle">
-                  {bin.count}
-                </text>
-              )}
-            </g>
-          );
-        })}
-
-        <line className="preview-axis-line" x1={padding.left} x2={width - padding.right} y1={padding.top + plotH} y2={padding.top + plotH} />
-        <text className="preview-axis" x={padding.left + barW / 2} y={height - 30} textAnchor="middle">BC 5000</text>
-        <text className="preview-axis" x={padding.left + 2 * (barW + gap) - gap / 2} y={height - 30} textAnchor="middle">0</text>
-        <text className="preview-axis" x={padding.left + 9 * (barW + gap) + barW / 2} y={height - 30} textAnchor="middle">AD 2000</text>
-      </svg>
-    </section>
+      <FloorSelector activeFloor={activeFloor} onFloorChange={setActiveFloor} />
+      <FloorOverviewMap activeFloor={activeFloor} selected={null} onSelect={(sectionId) => onOpenMap(activeFloor, sectionId)} compact />
+    </button>
   );
 }
 
-function GalleryPreview({ onJumpDepartment, onOpenMap }) {
-  const [hoveredDept, setHoveredDept] = useState(null);
-  const topDepts = useMemo(() => departmentCounts.slice(0, 6), []);
-  const maxCount = Math.max(...topDepts.map((d) => d[1]));
-
-  const hoveredLabel = hoveredDept !== null
-    ? `${topDepts[hoveredDept][0]} · ${topDepts[hoveredDept][1]} works`
-    : 'Hover and click a department to filter';
-
-  return (
-    <section className="preview-card preview-gallery">
-      <div className="preview-head">
-        <div>
-          <h2>Gallery Map</h2>
-          <p>{summaryStats.departments} departments · click any to explore</p>
-        </div>
-        <button type="button" className="preview-explore-btn" onClick={onOpenMap}>
-          Explore gallery <span>→</span>
-        </button>
-      </div>
-
-      <div className="preview-hover-label-html">{hoveredLabel}</div>
-
-      <div className="preview-dept-grid">
-        {topDepts.map(([name, count], i) => (
-          <button
-            type="button"
-            className="preview-dept-tile"
-            key={name}
-            onClick={() => onJumpDepartment(name)}
-            onMouseEnter={() => setHoveredDept(i)}
-            onMouseLeave={() => setHoveredDept(null)}
-          >
-            <div className="preview-dept-fill" style={{ height: `${(count / maxCount) * 100}%` }} />
-            <div className="preview-dept-info">
-              <strong>{name}</strong>
-              <em>{count}</em>
-            </div>
-            <span className="preview-dept-arrow">→</span>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function CollectionSummary({ onJumpTimelineRange, onJumpDepartment, onOpenTimeline, onOpenMap }) {
-  const years = timelineArtworks.map((w) => w.year);
-  const minYear = Math.min(...years);
-  const maxYear = Math.max(...years);
-  const formatYear = (y) => (y < 0 ? `BC ${Math.abs(y)}` : `AD ${y}`);
-  const timeSpan = `${formatYear(minYear)}–${formatYear(maxYear)}`;
-
+function CollectionSummary({ onOpenMap }) {
   return (
     <>
-      <PageTitle
-        title="Welcome to Inside The Met"
-        subtitle="Explore The Met collection through key metrics, time periods, and galleries."
-      />
-
-      <section className="metric-grid">
-        <MetricCard icon="▧" value={summaryStats.totalArtworks} label="Total Artworks" note="Highlighted works in this dataset" />
-        <MetricCard icon="▦" value={summaryStats.departments} label="Departments" note="Curatorial areas represented" />
-        <MetricCard icon="◇" value={summaryStats.classifications} label="Classification Groups" note="Object category groups" />
-        <MetricCard icon="◷" value={timeSpan} label="Time Span" note="Earliest to latest dated work" />
+      <PageTitle title="Collection Summary" subtitle="Explore public-domain highlights from The Met collection." />
+      <section className="summary-redesign">
+        <SummaryMapPreview onOpenMap={onOpenMap} />
+        <aside className="summary-overview">
+          <div className="overview-metrics">
+            <MetricCard icon="◼" value={summaryStats.totalArtworks} label="Total" note="Artworks in the loaded dataset" />
+            <MetricCard icon="◆" value={summaryStats.publicDomainWorks} label="Public Domain" note="Open access records" />
+            <MetricCard icon="●" value={summaryStats.departments} label="Departments" note="Distinct museum departments" />
+            <MetricCard icon="▲" value={summaryStats.classifications} label="Classes" note="Classification categories" />
+          </div>
+          <ChartPanel title="Classification Share"><DonutChart data={classificationCounts} /></ChartPanel>
+          <ChartPanel title="Top Departments"><MiniDepartmentBars /></ChartPanel>
+        </aside>
       </section>
-
-      <section className="preview-split">
-        <TimelinePreview onJumpTimeline={onJumpTimelineRange} onOpenTimeline={onOpenTimeline} />
-        <GalleryPreview onJumpDepartment={onJumpDepartment} onOpenMap={onOpenMap} />
+      <section className="summary-panels">
+        <ChartPanel title="Department Distribution"><BarChart data={departmentCounts} /></ChartPanel>
+        <ChartPanel title="Object End Date Histogram"><Histogram data={endDateBins} /></ChartPanel>
+        <ChartPanel title="Collection Pattern"><MiniDepartmentBars /></ChartPanel>
       </section>
     </>
   );
@@ -644,13 +527,13 @@ function RangeSlider({ range, setRange }) {
   );
 }
 
-function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, selectedClusterId, selectedArtworkId }) {
+function ScatterPlot({ works, categoryWorks, groupBy, range, categoryCounts, disabledCategories, onToggleCategory, onSelectCluster, selectedClusterId, selectedArtworkId }) {
   const [minYear, maxYear] = range;
   const categories = [...new Set(categoryWorks.map((work) => work[groupBy] || 'Unknown'))].sort((a, b) => a.localeCompare(b));
   const rowGap = groupBy === 'department' ? 58 : groupBy === 'classification' ? 34 : 28;
   const svgHeight = Math.min(2200, Math.max(620, 150 + Math.max(1, categories.length - 1) * rowGap));
   const svgWidth = 2200;
-  const plot = { left: 250, right: 2140, top: 34, bottom: svgHeight - 72 };
+  const plot = { left: 365, right: 2140, top: 34, bottom: svgHeight - 72 };
   const plotWidth = plot.right - plot.left;
   const plotHeight = plot.bottom - plot.top;
   const axisBreaks = [-5000, -1000, 0, 250, 500, 750, 1000, 1250, 1500, 1750, 2000];
@@ -676,6 +559,9 @@ function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, se
   };
   const categoryColor = (category) => categoryPalette[categories.indexOf(category) % categoryPalette.length];
   const bubbleRadius = (count) => Math.min(34, 5 + Math.sqrt(count) * 4.4);
+  const labelTextX = plot.left - 18;
+  const isCategoryDisabled = (category) => disabledCategories?.has(category);
+  const getCategoryCount = (category) => categoryCounts?.get(category) || 0;
 
   const groupedWorks = [...works.reduce((acc, work) => {
     const category = work[groupBy] || 'Unknown';
@@ -740,12 +626,46 @@ function ScatterPlot({ works, categoryWorks, groupBy, range, onSelectCluster, se
           </g>
         );
       })}
-      {categories.map((cat) => (
-        <g key={cat}>
-          <line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} />
-          <text x={plot.left - 18} y={y(cat) + 4}>{cat}</text>
-        </g>
-      ))}
+      {categories.map((cat) => {
+        const disabled = isCategoryDisabled(cat);
+        const count = getCategoryCount(cat);
+
+        return (
+          <g key={cat} className={disabled ? 'category-row disabled' : 'category-row'}>
+            <line x1={plot.left} x2={plot.right} y1={y(cat)} y2={y(cat)} />
+            <g
+              className={disabled ? 'category-label-button off' : 'category-label-button on'}
+              role="button"
+              tabIndex="0"
+              aria-label={`${disabled ? 'Show' : 'Hide'} ${cat}`}
+              onClick={() => onToggleCategory?.(cat)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onToggleCategory?.(cat);
+                }
+              }}
+            >
+              <rect
+                className="category-label-hitbox"
+                x="8"
+                y={y(cat) - 18}
+                width={plot.left - 26}
+                height="36"
+                rx="8"
+              />
+              <text
+                className="category-label"
+                x={labelTextX}
+                y={y(cat) + 4}
+                textAnchor="end"
+              >
+                {cat} ({count})
+              </text>
+            </g>
+          </g>
+        );
+      })}
       <text className="axis-title" x={(plot.left + plot.right) / 2} y={svgHeight - 18}>Object End Date</text>
       {positionedClusters.map((cluster) => {
         const isSelected = selectedClusterId === cluster.id || cluster.works.some((work) => work.id === selectedArtworkId);
@@ -829,6 +749,7 @@ function TimelineClusterList({ cluster, onClose, selectedArtworkId, isFavorite, 
 function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
   const [range, setRange] = useState([-5000, 2000]);
   const [groupBy, setGroupBy] = useState('department');
+  const [disabledCategories, setDisabledCategories] = useState(() => new Set());
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [selectedArtworkId, setSelectedArtworkId] = useState(null);
   const [pinnedCluster, setPinnedCluster] = useState(false);
@@ -836,20 +757,10 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
   useEffect(() => {
     if (!target) return;
 
-    // Home에서 시대 막대 클릭으로 넘어온 경우
-    if (target.rangeOnly) {
-      setRange([target.minYear, target.maxYear]);
-      setGroupBy('department');
-      setSelectedCluster(null);
-      setSelectedArtworkId(null);
-      setPinnedCluster(false);
-      return;
-    }
-
-    // 검색에서 작품 클릭으로 넘어온 경우
     const padding = Math.max(150, Math.round(Math.abs(target.year) * 0.08));
     setRange([Math.max(-5000, target.year - padding), Math.min(2000, target.year + padding)]);
     setGroupBy('department');
+    setDisabledCategories(new Set());
     setSelectedArtworkId(target.id);
     setSelectedCluster({
       id: `search-${target.id}`,
@@ -862,7 +773,51 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
   }, [target]);
 
   const filtered = useMemo(() => timelineArtworks.filter((work) => work.year >= range[0] && work.year <= range[1]), [range]);
-  const activeCluster = selectedCluster && selectedCluster.works.some((clusterWork) => filtered.some((work) => work.id === clusterWork.id)) ? selectedCluster : null;
+  const categoryCounts = useMemo(() => filtered.reduce((counts, work) => {
+    const category = work[groupBy] || 'Unknown';
+    counts.set(category, (counts.get(category) || 0) + 1);
+    return counts;
+  }, new Map()), [filtered, groupBy]);
+
+  const timelineCategories = useMemo(
+    () => Array.from(categoryCounts.keys()).sort((a, b) => a.localeCompare(b)),
+    [categoryCounts],
+  );
+  const visibleFiltered = useMemo(
+    () => filtered.filter((work) => !disabledCategories.has(work[groupBy] || 'Unknown')),
+    [filtered, disabledCategories, groupBy],
+  );
+  const activeCluster = selectedCluster
+    && !disabledCategories.has(selectedCluster.category)
+    && selectedCluster.works.some((clusterWork) => visibleFiltered.some((work) => work.id === clusterWork.id))
+    ? selectedCluster
+    : null;
+
+  const toggleCategory = (category) => {
+    setDisabledCategories((current) => {
+      const next = new Set(current);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+
+    if (selectedCluster?.category === category) {
+      setSelectedCluster(null);
+      setSelectedArtworkId(null);
+      setPinnedCluster(false);
+    }
+  };
+
+  const showAllCategories = () => {
+    setDisabledCategories(new Set());
+  };
+
+  const hideAllCategories = () => {
+    setDisabledCategories(new Set(timelineCategories));
+    setSelectedCluster(null);
+    setSelectedArtworkId(null);
+    setPinnedCluster(false);
+  };
 
   const chooseCluster = (cluster, pin = false) => {
     if (pin && pinnedCluster && selectedCluster?.id === cluster.id) {
@@ -890,6 +845,7 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
               className={groupBy === filter ? 'active' : ''}
               onClick={() => {
                 setGroupBy(filter);
+                setDisabledCategories(new Set());
                 setSelectedCluster(null);
                 setSelectedArtworkId(null);
                 setPinnedCluster(false);
@@ -901,12 +857,28 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
         </div>
       </section>
       <section className={activeCluster ? 'timeline-layout has-detail' : 'timeline-layout'}>
-        <ChartPanel title={`Grouped by ${groupBy}`} headerExtra={`${filtered.length} works`}>
+        <ChartPanel
+          title={`Grouped by ${groupBy}`}
+          headerExtra={
+            <div className="timeline-header-tools">
+              <span>{visibleFiltered.length} / {filtered.length} works visible</span>
+              <span className="timeline-header-divider" aria-hidden="true" />
+              <span className="timeline-toggle-help">Click a label to show/hide groups.</span>
+              <div className="timeline-toggle-actions">
+                <button type="button" onClick={showAllCategories}>Show all</button>
+                <button type="button" onClick={hideAllCategories}>Hide all</button>
+              </div>
+            </div>
+          }
+        >
           <ScatterPlot
-            works={filtered}
+            works={visibleFiltered}
             categoryWorks={timelineArtworks}
             groupBy={groupBy}
             range={range}
+            categoryCounts={categoryCounts}
+            disabledCategories={disabledCategories}
+            onToggleCategory={toggleCategory}
             onSelectCluster={chooseCluster}
             selectedClusterId={activeCluster?.id}
             selectedArtworkId={selectedArtworkId}
@@ -1146,26 +1118,6 @@ export default function App() {
     setActiveTab('map');
   };
 
-  // Home에서 시대 막대 클릭 → Timeline 페이지로 범위 적용해서 이동
-  const jumpToTimelineRange = (minYear, maxYear) => {
-    setTimelineTarget({ rangeOnly: true, minYear, maxYear, requestedAt: Date.now() });
-    setActiveTab('timeline');
-  };
-
-  // Home에서 부서 박스 클릭 → Gallery 페이지로 해당 부서 선택해서 이동
-  const jumpToDepartment = (departmentName) => {
-    const section = floorSections.find((s) => s.departments.some((d) =>
-      d === departmentName || d.replace(/^The /, '') === departmentName
-    ));
-
-    setGalleryTarget({
-      floorId: section?.floor || 'floor-1',
-      sectionId: section?.id || null,
-      requestedAt: Date.now(),
-    });
-    setActiveTab('map');
-  };
-
   const jumpToTimeline = (artwork) => {
     setTimelineTarget({ ...artwork, requestedAt: Date.now() });
     setActiveTab('timeline');
@@ -1193,14 +1145,7 @@ export default function App() {
         favoritesCount={favorites.length}
       />
       <main className="dashboard">
-        {activeTab === 'summary' && (
-          <CollectionSummary
-            onJumpTimelineRange={jumpToTimelineRange}
-            onJumpDepartment={jumpToDepartment}
-            onOpenTimeline={() => setActiveTab('timeline')}
-            onOpenMap={() => setActiveTab('map')}
-          />
-        )}
+        {activeTab === 'summary' && <CollectionSummary onOpenMap={openGalleryMap} />}
         {activeTab === 'timeline' && (
           <TimelineViewer
             target={timelineTarget}

@@ -851,35 +851,6 @@ function ScatterPlot({
   );
 }
 
-function ArtworkDetailCard({ artwork, onClose, isFavorite, onToggleFavorite }) {
-  if (!artwork) {
-    return <aside className="detail-card empty">Hover over a timeline bubble to preview artworks.</aside>;
-  }
-
-  return (
-    <aside className="detail-card">
-      <button type="button" className="close" onClick={onClose}>×</button>
-      <FavoriteButton
-        artwork={artwork}
-        isFavorite={isFavorite}
-        onToggleFavorite={onToggleFavorite}
-        className="detail-favorite-button"
-      />
-      <MetArtworkImage artwork={artwork} alt={artwork.title} />
-      <h2>{artwork.title}</h2>
-      <p className="muted">{artwork.artist}</p>
-      <dl>
-        <dt>Date</dt>
-        <dd>{artwork.date}</dd>
-        <dt>Medium</dt>
-        <dd>{artwork.medium}</dd>
-      </dl>
-      <p>{artwork.description}</p>
-      <a href={getArtworkUrl(artwork)} target="_blank" rel="noreferrer">View on The Met Website</a>
-    </aside>
-  );
-}
-
 function TimelineClusterList({ cluster, onClose, selectedArtworkId, isFavorite, onToggleFavorite }) {
   if (!cluster) return null;
 
@@ -893,11 +864,10 @@ function TimelineClusterList({ cluster, onClose, selectedArtworkId, isFavorite, 
         {cluster.category} · around {cluster.year < 0 ? `${Math.round(Math.abs(cluster.year))} BCE` : `AD ${Math.round(cluster.year)}`}
       </p>
       {cluster.works.map((work) => (
-        <ArtworkDetailCard
+        <ArtworkListItem
           key={work.id}
           artwork={work}
           selected={work.id === selectedArtworkId}
-          onClose={onClose}
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite}
         />
@@ -1223,12 +1193,19 @@ function ArtworkListItem({ artwork, selected, isFavorite, onToggleFavorite }) {
           onToggleFavorite={onToggleFavorite}
           className="artwork-favorite-button"
         />
+        {/* 기본 표시: 작품 이름 · 작가 · 연도 */}
         <h3>{artwork.title}</h3>
-        <p>{artwork.culture}</p>
-        <small>{artwork.date}</small>
-        <small>{artwork.medium}</small>
-        <small>{artwork.accession}</small>
-        <a href={getArtworkUrl(artwork)} target="_blank" rel="noreferrer">View on The Met Website</a>
+        <p className="art-item-artist">{artwork.artist}</p>
+        <small className="art-item-year">{artwork.date}</small>
+        {/* hover/선택 시 펼쳐지는 상세 정보 (라벨: 값 형식) */}
+        <div className="art-item-details">
+          <small><span className="art-item-label">Culture:</span> {artwork.culture}</small>
+          <small><span className="art-item-label">Department:</span> {artwork.department}</small>
+          <small><span className="art-item-label">Gallery:</span> {artwork.galleryNumber ? artwork.galleryNumber : 'Not on display'}</small>
+          <small><span className="art-item-label">Medium:</span> {artwork.medium}</small>
+          <small><span className="art-item-label">Accession:</span> {artwork.accession}</small>
+          <a href={getArtworkUrl(artwork)} target="_blank" rel="noreferrer">View on The Met Website</a>
+        </div>
       </div>
     </article>
   );

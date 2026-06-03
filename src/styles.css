@@ -887,9 +887,10 @@ a {
 }
 
 .scatter-svg {
-  width: var(--scatter-width, 100%);
-  height: var(--scatter-height);
-  min-width: 1000px;
+  /* 패널 너비에 맞춰 스케일해 타임라인 전체(오른쪽 끝까지)가 보이도록 한다.
+     높이는 viewBox 비율을 따라간다. */
+  width: 100%;
+  height: auto;
   display: block;
 }
 
@@ -998,10 +999,13 @@ a {
 
 .detail-card dl {
   display: grid;
-  grid-template-columns: 70px 1fr;
-  gap: 8px;
+  /* 라벨 길이('DEPARTMENT' 등)에 맞춰 첫 열을 자동 산정해 값과 겹치지 않게 한다. */
+  grid-template-columns: max-content 1fr;
+  column-gap: 16px;
+  row-gap: 8px;
   margin: 16px 0;
   font-size: 13px;
+  align-items: baseline;
 }
 
 .detail-card dt {
@@ -1275,14 +1279,42 @@ a {
   font-size: 12px;
 }
 
-.art-list-item a {
-  display: none;
-  width: fit-content;
-  font-size: 12px;
+.art-item-artist {
+  color: var(--muted);
 }
 
-.art-list-item:hover a {
-  display: inline-flex;
+.art-item-details .art-item-label {
+  display: inline;
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* 상세 항목 값은 살짝 흐리게 두어 라벨과 구분 */
+.art-item-details small {
+  color: var(--muted);
+}
+
+/* 상세 정보: 기본은 접혀 있다가 hover/선택 시 펼쳐진다. */
+.art-item-details {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  overflow: hidden;
+  transition: max-height 240ms ease, opacity 240ms ease, margin-top 240ms ease;
+}
+
+.art-list-item:hover .art-item-details,
+.art-list-item.selected .art-item-details {
+  max-height: 260px;
+  opacity: 1;
+  margin-top: 6px;
+}
+
+.art-list-item a {
+  width: fit-content;
+  margin-top: 4px;
+  font-size: 12px;
 }
 
 /* ========== Favorite feature ========== */

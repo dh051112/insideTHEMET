@@ -8,7 +8,10 @@ const palette = [
   ['#10261c', '#39745a', '#bdf2d2'],
 ];
 
-const parseCsv = (text) => {
+const parseCsv = (rawText) => {
+  // CSV 재내보내기 시 선두에 붙는 BOM(U+FEFF)을 제거한다.
+  // 남겨두면 첫 헤더가 'Object Number' 대신 '﻿Object Number'가 되어 키 조회가 깨진다.
+  const text = rawText.replace(/^﻿/, '');
   const rows = [];
   let row = [];
   let cell = '';

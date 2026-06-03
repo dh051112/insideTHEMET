@@ -49,6 +49,16 @@ const TIMELINE_BINS = [
 const FAVORITES_STORAGE_KEY = 'inside-the-met-favorites';
 const MET_URL = 'https://www.metmuseum.org/art/collection';
 
+const TIMELINE_FILTER_SAVE_KEY = 'inside-the-met-timeline-filter-saves';
+
+function createDefaultTimelineFilterSaves() {
+  return [1, 2, 3].map((slot) => ({
+    id: slot,
+    name: `Filter ${slot}`,
+    config: null,
+  }));
+}
+
 const metImageCache = new Map();
 
 function getArtworkUrl(artwork) {
@@ -896,13 +906,24 @@ function TimelineClusterList({ cluster, onClose, selectedArtworkId, isFavorite, 
   );
 }
 
-function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
+function TimelineViewer({ target, isFavorite, onToggleFavorite, onAddFavorites }) {
   const [range, setRange] = useState([-5000, 2000]);
   const [groupBy, setGroupBy] = useState('department');
   const [disabledCategories, setDisabledCategories] = useState(() => new Set());
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [selectedArtworkId, setSelectedArtworkId] = useState(null);
   const [pinnedCluster, setPinnedCluster] = useState(false);
+
+  const [savedFilters, setSavedFilters] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(TIMELINE_FILTER_SAVE_KEY);
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed) && parsed.length === 3) return parsed;
+    } catch {
+      // Use defaults if saved filter data is unavailable or corrupted.
+    }
+    return createDefaultTimelineFilterSaves();
+  });
 
   useEffect(() => {
     if (!target) return;
@@ -934,6 +955,14 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
     setPinnedCluster(true);
   }, [target]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(TIMELINE_FILTER_SAVE_KEY, JSON.stringify(savedFilters));
+    } catch {
+      // Keep in-memory filter saves even if localStorage is not available.
+    }
+  }, [savedFilters]);
+
   const filtered = useMemo(() => timelineArtworks.filter((work) => work.year >= range[0] && work.year <= range[1]), [range]);
   const categoryCounts = useMemo(() => filtered.reduce((counts, work) => {
     const category = work[groupBy] || 'Unknown';
@@ -953,6 +982,11 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
     && selectedCluster.works.some((clusterWork) => visibleFiltered.some((work) => work.id === clusterWork.id))
     ? selectedCluster
     : null;
+
+  const visibleNewFavoriteCount = useMemo(
+    () => visibleFiltered.filter((work) => !isFavorite?.(work.id)).length,
+    [visibleFiltered, isFavorite],
+  );
 
   const toggleCategory = (category) => {
     setDisabledCategories((current) => {
@@ -980,6 +1014,38 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
     setPinnedCluster(false);
   };
 
+  const renameSavedFilter = (slotId, name) => {
+    setSavedFilters((current) => current.map((slot) => (
+      slot.id === slotId ? { ...slot, name } : slot
+    )));
+  };
+
+  const saveCurrentFilter = (slotId) => {
+    setSavedFilters((current) => current.map((slot) => (
+      slot.id === slotId
+        ? {
+            ...slot,
+            config: {
+              range,
+              groupBy,
+              disabledCategories: Array.from(disabledCategories),
+            },
+          }
+        : slot
+    )));
+  };
+
+  const loadSavedFilter = (slot) => {
+    if (!slot.config) return;
+
+    setRange(slot.config.range || [-5000, 2000]);
+    setGroupBy(slot.config.groupBy || 'department');
+    setDisabledCategories(new Set(slot.config.disabledCategories || []));
+    setSelectedCluster(null);
+    setSelectedArtworkId(null);
+    setPinnedCluster(false);
+  };
+
   const chooseCluster = (cluster, pin = false) => {
     if (pin && pinnedCluster && selectedCluster?.id === cluster.id) {
       setSelectedCluster(null);
@@ -996,6 +1062,54 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite }) {
   return (
     <>
       <PageTitle title="Timeline Viewer" subtitle="Browse artworks by object end date and compare distribution patterns." />
+      <section className="timeline-top-actions">
+        <section className="timeline-bulk-favorite-card" aria-label="Save filtered timeline artworks">
+        <div>
+          <strong>Save current timeline view</strong>
+          <span>{visibleFiltered.length} visible works · {visibleNewFavoriteCount} not yet saved</span>
+        </div>
+        <button
+          type="button"
+          disabled={visibleNewFavoriteCount === 0}
+          onClick={() => onAddFavorites?.(visibleFiltered)}
+        >
+          ★ Add visible works to favorites
+        </button>
+        </section>
+        <section className="timeline-filter-save-panel" aria-label="Saved timeline filters">
+        <div className="timeline-filter-save-title">
+          <strong>Saved filters</strong>
+          <span>Save or reload the current timeline filter setup.</span>
+        </div>
+        <div className="timeline-filter-save-grid">
+          {savedFilters.map((slot) => (
+            <div className="timeline-filter-save-slot" key={slot.id}>
+              <input
+                value={slot.name}
+                onChange={(event) => renameSavedFilter(slot.id, event.target.value)}
+                aria-label={`Filter ${slot.id} name`}
+              />
+              <button
+                type="button"
+                onClick={() => saveCurrentFilter(slot.id)}
+                disabled={visibleFiltered.length === 0}
+                title={visibleFiltered.length === 0 ? 'No visible artworks to save as a filter' : 'Save current filter'}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => loadSavedFilter(slot)}
+                disabled={!slot.config}
+                title={slot.config ? 'Load saved filter' : 'No saved filter in this slot'}
+              >
+                Load
+              </button>
+            </div>
+          ))}
+        </div>
+        </section>
+      </section>
       <section className="timeline-controls">
         <RangeSlider range={range} setRange={setRange} />
         <div className="filter-buttons">
@@ -1231,7 +1345,7 @@ function GalleryMap({ target, isFavorite, onToggleFavorite }) {
   );
 }
 
-function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onToggleFavorite }) {
+function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onToggleFavorite, onClearFavorites }) {
   return (
     <>
       <PageTitle
@@ -1239,9 +1353,20 @@ function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onTog
         subtitle="Review artworks saved from the timeline viewer and gallery map."
       />
       <section className="favorites-page">
-        <div className="panel-head">
+        <div className="panel-head favorites-panel-head">
           <h2>Favorite Artworks</h2>
-          <span>{favorites.length} saved</span>
+          <div className="favorites-header-actions">
+            <span>{favorites.length} saved</span>
+            {favorites.length > 0 && (
+              <button
+                type="button"
+                className="clear-favorites-button"
+                onClick={onClearFavorites}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
 
         {favorites.length === 0 ? (
@@ -1312,6 +1437,22 @@ export default function App() {
     });
   };
 
+  const addFavorites = (artworks = []) => {
+    setFavorites((currentFavorites) => {
+      const existingIds = new Set(currentFavorites.map((item) => String(item.id)));
+      const additions = artworks
+        .filter((artwork) => !existingIds.has(String(artwork.id)))
+        .map(normalizeFavoriteArtwork);
+
+      if (additions.length === 0) return currentFavorites;
+      return [...additions, ...currentFavorites];
+    });
+  };
+
+  const clearFavorites = () => {
+    setFavorites([]);
+  };
+
   // Home에서 시대 막대 클릭 → Timeline 페이지로 범위 적용해서 이동
   const jumpToTimelineRange = (minYear, maxYear) => {
     setTimelineTarget({ rangeOnly: true, minYear, maxYear, requestedAt: Date.now() });
@@ -1372,6 +1513,7 @@ export default function App() {
             target={timelineTarget}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
+            onAddFavorites={addFavorites}
           />
         )}
         {activeTab === 'map' && (
@@ -1388,6 +1530,7 @@ export default function App() {
             onJumpMap={jumpToMap}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
+            onClearFavorites={clearFavorites}
           />
         )}
       </main>

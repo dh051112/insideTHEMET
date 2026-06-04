@@ -115,3 +115,30 @@ export const pathCentroid = (pathStr) => {
   }
   return count ? [sumX / count, sumY / count] : [0, 0];
 };
+
+// 특정 층·부서의 방 지도에 포함된 갤러리 번호 집합. (작품 매칭의 기준)
+const roomGalleryCache = new Map();
+export const getRoomGalleries = (floorId, department) => {
+  const key = `${floorId}::${department}`;
+  if (roomGalleryCache.has(key)) return roomGalleryCache.get(key);
+
+  const svg = getRoomMapSvg(floorId, department);
+  const galleries = new Set();
+  if (svg) {
+    const regex = /data-gallery="([^"]+)"/g;
+    let match;
+    while ((match = regex.exec(svg))) galleries.add(match[1]);
+  }
+  roomGalleryCache.set(key, galleries);
+  return galleries;
+};
+
+// 작품이 실제로 속한 "도면상" 부서를 판정한다.
+// CSV의 Department(예: 'European Paintings')는 도면에서 시대별로 쪼개진 부서를
+// 구분하지 못하므로, 갤러리 번호가 어느 부서 방 지도에 있는지를 우선 사용하고
+// 갤러리 정보가 없을 때만 부서명으로 추정한다.
+export const artworkDepartment = (work) => {
+  const gallery = String(work?.galleryNumber || '');
+  if (gallery && galleryLocation[gallery]) return galleryLocation[gallery].department;
+  return resolveDepartment(work?.department);
+};

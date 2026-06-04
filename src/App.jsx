@@ -9,11 +9,13 @@ import {
   timelineArtworks,
 } from './mockData.js';
 import {
+  artworkDepartment,
   departmentFloor,
   deptColor,
   floorplanFloors,
   floorplanViewBox,
   galleryLocation,
+  getRoomGalleries,
   getRoomMapSvg,
   pathCentroid,
   resolveDepartment,
@@ -1306,22 +1308,32 @@ function GalleryMap({ target, isFavorite, onToggleFavorite, onAddFavorites }) {
   const [room, setRoom] = useState(null);
   const [selectedArtworkId, setSelectedArtworkId] = useState(null);
 
-  // 실제 선택된 department 안에 작품이 있는 갤러리(방)만 클릭/하이라이트 대상이 된다.
-  // 전체 galleryArtworks를 그대로 쓰면 다른 department에서 같은 room number를 쓰는 경우
-  // 빈 room까지 밝아지는 문제가 생길 수 있어서 selectedDept 기준으로 제한한다.
-  const galleriesWithWorks = useMemo(() => {
-    if (!selectedDept) return new Set();
+  // 작품-부서 매칭은 CSV의 Department가 아니라 "갤러리 번호가 현재 보고 있는
+  // 층·부서의 방 지도에 들어있는지"로 판정한다. CSV는 유럽 회화를 한 부서로 묶지만
+  // 도면은 시대별로 쪼개져 있어(600번대 vs 800번대) 부서명 매칭은 깨진다.
+  const roomGalleries = useMemo(
+    () => (selectedDept ? getRoomGalleries(activeFloor, selectedDept) : new Set()),
+    [activeFloor, selectedDept],
+  );
+  const selectedDeptWorks = useMemo(
+    () => (selectedDept ? allArtworks.filter((work) => roomGalleries.has(String(work.galleryNumber))) : []),
+    [selectedDept, roomGalleries],
+  );
 
-    return new Set(
-      allArtworks
-        .filter((work) => {
-          if (resolveDepartment(work.department) !== selectedDept || !work.galleryNumber) return false;
-          const location = galleryLocation[String(work.galleryNumber)];
-          return !location?.floor || String(location.floor) === String(activeFloor);
-        })
-        .map((work) => String(work.galleryNumber)),
-    );
-  }, [activeFloor, selectedDept]);
+  // 현재 층의 부서별 작품 수 (갤러리 기준). 작품 없는 부서는 개요 도면에서 흐리게 처리한다.
+  const floorDeptCounts = useMemo(() => {
+    const floor = floorplanFloors.find((item) => item.id === activeFloor);
+    if (!floor) return {};
+    return floor.departments.reduce((counts, dept) => {
+      const galleries = getRoomGalleries(activeFloor, dept.department);
+      counts[dept.department] = allArtworks.filter((work) => galleries.has(String(work.galleryNumber))).length;
+      return counts;
+    }, {});
+  }, [activeFloor]);
+  const galleriesWithWorks = useMemo(
+    () => new Set(selectedDeptWorks.map((work) => String(work.galleryNumber))),
+    [selectedDeptWorks],
+  );
 
   useEffect(() => {
     if (!target) return;
@@ -1346,20 +1358,11 @@ function GalleryMap({ target, isFavorite, onToggleFavorite, onAddFavorites }) {
 
   const floorMeta = floorplanFloors.find((item) => item.id === activeFloor);
   const roomSvg = selectedDept ? getRoomMapSvg(activeFloor, selectedDept) : null;
-  const selectedDeptWorks = useMemo(() => {
-    if (!selectedDept) return [];
-    return allArtworks.filter((work) => resolveDepartment(work.department) === selectedDept);
-  }, [selectedDept]);
   const selectedDeptNewFavoriteCount = selectedDeptWorks.filter((work) => !isFavorite?.(work.id)).length;
-  const selectedRoomWorks = useMemo(() => {
-    if (!room || !selectedDept) return [];
-
-    return selectedDeptWorks.filter((work) => {
-      if (String(work.galleryNumber) !== String(room)) return false;
-      const location = galleryLocation[String(work.galleryNumber)];
-      return !location?.floor || String(location.floor) === String(activeFloor);
-    });
-  }, [activeFloor, room, selectedDept, selectedDeptWorks]);
+  const selectedRoomWorks = useMemo(
+    () => (room ? selectedDeptWorks.filter((work) => String(work.galleryNumber) === String(room)) : []),
+    [room, selectedDeptWorks],
+  );
 
   return (
     <>
@@ -1372,7 +1375,13 @@ function GalleryMap({ target, isFavorite, onToggleFavorite, onAddFavorites }) {
             title={floorMeta?.label || 'Floor Overview'}
             headerExtra={selectedDept || `${floorMeta?.departments.length || 0} departments`}
           >
-            <DepartmentFloorMap floor={activeFloor} selectedDept={selectedDept} onSelectDept={chooseDept} />
+            <DepartmentFloorMap
+              floor={activeFloor}
+              selectedDept={selectedDept}
+              onSelectDept={chooseDept}
+              deptCounts={floorDeptCounts}
+              dimInactive
+            />
           </ChartPanel>
         )}
         {selectedDept && (
@@ -1431,7 +1440,7 @@ function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onTog
 
   const favoriteDeptCounts = useMemo(() => {
     return favorites.reduce((counts, artwork) => {
-      const resolvedDept = resolveDepartment(artwork.department);
+      const resolvedDept = artworkDepartment(artwork);
       if (!resolvedDept) return counts;
       counts[resolvedDept] = (counts[resolvedDept] || 0) + 1;
       return counts;
@@ -1447,7 +1456,7 @@ function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onTog
     if (selectedFavoriteDeptSet.size === 0) return favorites;
 
     return favorites.filter((artwork) => {
-      const resolvedDept = resolveDepartment(artwork.department);
+      const resolvedDept = artworkDepartment(artwork);
       return selectedFavoriteDeptSet.has(resolvedDept);
     });
   }, [favorites, selectedFavoriteDeptSet]);

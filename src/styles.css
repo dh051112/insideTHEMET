@@ -2676,3 +2676,86 @@ a {
     max-height: 82px !important;
   }
 }
+
+/* Final timeline hover behavior: expand only the hovered compact card.
+   This prevents the separate floating detail panel from blocking the top-left card. */
+.timeline-hover-detail-card {
+  display: none !important;
+}
+
+.timeline-cluster-grid {
+  align-items: start;
+}
+
+.timeline-cluster-grid .art-list-item {
+  isolation: isolate;
+  transform-origin: center center;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    min-height 160ms ease;
+}
+
+.timeline-cluster-grid .art-list-item:hover,
+.timeline-cluster-grid .art-list-item.selected {
+  z-index: 12;
+  transform: scale(1.045) !important;
+  border-color: var(--red);
+  background: rgba(237, 0, 43, 0.12);
+  box-shadow: 0 0 22px rgba(237, 0, 43, 0.34);
+}
+
+.timeline-cluster-grid .art-item-details {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: auto !important;
+  display: block !important;
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: max-height 170ms ease, opacity 170ms ease, margin-top 170ms ease;
+}
+
+.timeline-cluster-grid .art-list-item:hover .art-item-details,
+.timeline-cluster-grid .art-list-item.selected .art-item-details {
+  max-height: 150px !important;
+  opacity: 1;
+  margin-top: 5px;
+  padding: 0 !important;
+}
+
+.timeline-cluster-grid .art-item-details small {
+  display: block;
+  margin: 1px 0;
+  font-size: 8.7px !important;
+  line-height: 1.16;
+}
+
+.timeline-cluster-grid .art-item-details small:nth-of-type(n+4) {
+  display: none;
+}
+
+.timeline-cluster-grid .art-item-details a {
+  display: inline-flex !important;
+  min-height: 22px;
+  margin-top: 4px;
+  padding: 0 8px;
+  font-size: 8.5px !important;
+}
+
+@media (max-width: 720px) {
+  .timeline-cluster-grid .art-list-item:hover,
+  .timeline-cluster-grid .art-list-item.selected {
+    transform: none !important;
+  }
+}

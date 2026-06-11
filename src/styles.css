@@ -2759,3 +2759,24 @@ a {
     transform: none !important;
   }
 }
+
+/* Final patch: make timeline left-side category labels more readable.
+   Scope: only labels under “Grouped by ...” in the timeline scatter plot. */
+.scatter-svg .category-label-button .category-label {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.01em;
+  fill: rgba(242, 247, 250, 0.96) !important;
+  paint-order: stroke;
+  stroke: rgba(6, 12, 16, 0.72);
+  stroke-width: 1.4px;
+  stroke-linejoin: round;
+}
+
+.scatter-svg .category-label-button.off .category-label {
+  fill: rgba(170, 181, 188, 0.62) !important;
+}
+
+.scatter-svg .category-label-hitbox {
+  height: 42px;
+}

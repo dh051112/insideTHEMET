@@ -9,11 +9,13 @@ import {
   timelineArtworks,
 } from './mockData.js';
 import {
+  artworkDepartment,
   departmentFloor,
   deptColor,
   floorplanFloors,
   floorplanViewBox,
   galleryLocation,
+  getRoomGalleries,
   getRoomMapSvg,
   pathCentroid,
   resolveDepartment,
@@ -460,6 +462,7 @@ function DepartmentFloorMap({
   deptCounts = null,
   dimInactive = false,
   showCounts = false,
+  className = '',
 }) {
   const data = floorplanFloors.find((item) => item.id === floor);
   if (!data) return null;
@@ -471,7 +474,7 @@ function DepartmentFloorMap({
       : [];
 
   return (
-    <svg className="floorplan-svg" viewBox={floorplanViewBox} role="img" aria-label={`${data.label} department map`}>
+    <svg className={`floorplan-svg ${className}`.trim()} viewBox={floorplanViewBox} role="img" aria-label={`${data.label} department map`}>
       <path className="floorplan-wall" d={data.outerWall} />
       {data.departments.map((dept) => {
         const color = deptColor(dept.department);
@@ -884,50 +887,31 @@ function ScatterPlot({
   );
 }
 
-function TimelineClusterList({ cluster, onClose, selectedArtworkId, isFavorite, onToggleFavorite }) {
-  const [hoveredArtwork, setHoveredArtwork] = useState(null);
-
-  useEffect(() => {
-    setHoveredArtwork(null);
-  }, [cluster]);
-
+function TimelineClusterList({ cluster, onClose, selectedArtworkId, isFavorite, onToggleFavorite, onAddFavorites }) {
   if (!cluster) return null;
 
+  const newFavoriteCount = cluster.works.filter((work) => !isFavorite?.(work.id)).length;
+
   return (
-    <aside className="detail-card timeline-cluster-list" onMouseLeave={() => setHoveredArtwork(null)}>
-      <div className="panel-head">
-        <h2>{cluster.works.length > 1 ? `${cluster.works.length} Works` : 'Selected Work'}</h2>
+    <aside className="detail-card timeline-cluster-list">
+      <div className="panel-head timeline-cluster-head">
+        <div>
+          <h2>{cluster.works.length > 1 ? `${cluster.works.length} Works` : 'Selected Work'}</h2>
+          <p className="cluster-meta">
+            {cluster.category} · around {cluster.year < 0 ? `${Math.round(Math.abs(cluster.year))} BCE` : `AD ${Math.round(cluster.year)}`}
+          </p>
+        </div>
         <button type="button" className="close" onClick={onClose}>×</button>
       </div>
-      <p className="cluster-meta">
-        {cluster.category} · around {cluster.year < 0 ? `${Math.round(Math.abs(cluster.year))} BCE` : `AD ${Math.round(cluster.year)}`}
-      </p>
-
-      {hoveredArtwork && (
-        <article className="timeline-hover-detail-card">
-          <MetArtworkImage artwork={hoveredArtwork} alt={hoveredArtwork.title} />
-          <div className="timeline-hover-detail-content">
-            <FavoriteButton
-              artwork={hoveredArtwork}
-              isFavorite={isFavorite}
-              onToggleFavorite={onToggleFavorite}
-              className="timeline-hover-favorite-button"
-            />
-            <h3>{hoveredArtwork.title}</h3>
-            <p className="art-item-artist">{hoveredArtwork.artist}</p>
-            <small className="art-item-year">{hoveredArtwork.date}</small>
-            <div className="timeline-hover-detail-fields">
-              <small><span className="art-item-label">Culture:</span> {hoveredArtwork.culture}</small>
-              <small><span className="art-item-label">Department:</span> {hoveredArtwork.department}</small>
-              <small><span className="art-item-label">Gallery:</span> {hoveredArtwork.galleryNumber ? hoveredArtwork.galleryNumber : 'Not on display'}</small>
-              <small><span className="art-item-label">Medium:</span> {hoveredArtwork.medium}</small>
-              <small><span className="art-item-label">Accession:</span> {hoveredArtwork.accession}</small>
-            </div>
-            <a href={getArtworkUrl(hoveredArtwork)} target="_blank" rel="noreferrer">View on The Met Website</a>
-          </div>
-        </article>
-      )}
-
+      <button
+        type="button"
+        className="cluster-add-favorites-button"
+        disabled={newFavoriteCount === 0}
+        onClick={() => onAddFavorites?.(cluster.works)}
+      >
+        ★ Add this cluster to favorites
+        <span>{newFavoriteCount === 0 ? 'All saved' : `${newFavoriteCount} new`}</span>
+      </button>
       <div className="timeline-cluster-grid">
         {cluster.works.map((work) => (
           <ArtworkListItem
@@ -936,7 +920,6 @@ function TimelineClusterList({ cluster, onClose, selectedArtworkId, isFavorite, 
             selected={work.id === selectedArtworkId}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
-            onHoverArtwork={setHoveredArtwork}
           />
         ))}
       </div>
@@ -1208,6 +1191,7 @@ function TimelineViewer({ target, isFavorite, onToggleFavorite, onAddFavorites }
             }}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
+            onAddFavorites={onAddFavorites}
           />
         )}
       </section>
@@ -1250,13 +1234,9 @@ function RoomDetailMap({ svg, selectedRoom, onRoomSelect, galleriesWithWorks }) 
   );
 }
 
-function ArtworkListItem({ artwork, selected, isFavorite, onToggleFavorite, onHoverArtwork }) {
+function ArtworkListItem({ artwork, selected, isFavorite, onToggleFavorite }) {
   return (
-    <article
-      className={selected ? 'art-list-item selected' : 'art-list-item'}
-      onMouseEnter={onHoverArtwork ? () => onHoverArtwork(artwork) : undefined}
-      onFocus={onHoverArtwork ? () => onHoverArtwork(artwork) : undefined}
-    >
+    <article className={selected ? 'art-list-item selected' : 'art-list-item'}>
       <MetArtworkImage artwork={artwork} alt={artwork.title} />
       <div className="art-list-item-content">
         <FavoriteButton
@@ -1283,8 +1263,9 @@ function ArtworkListItem({ artwork, selected, isFavorite, onToggleFavorite, onHo
   );
 }
 
-function ArtworkList({ room, selectedArtworkId, isFavorite, onToggleFavorite, onBack }) {
-  const works = galleryArtworks[room] || timelineArtworks.slice(0, 4);
+function ArtworkList({ room, selectedArtworkId, isFavorite, onToggleFavorite, onAddFavorites, onBack, worksOverride = null }) {
+  const works = worksOverride || galleryArtworks[room] || timelineArtworks.slice(0, 4);
+  const newFavoriteCount = works.filter((work) => !isFavorite?.(work.id)).length;
 
   return (
     <aside className="art-list">
@@ -1293,9 +1274,20 @@ function ArtworkList({ room, selectedArtworkId, isFavorite, onToggleFavorite, on
           <span aria-hidden="true">←</span> Back to the map
         </button>
       )}
-      <div className="panel-head">
-        <h2>Room {room}</h2>
-        <span>{works.length} works</span>
+      <div className="panel-head map-list-head">
+        <div>
+          <h2>Room {room}</h2>
+          <span>{works.length} works</span>
+        </div>
+        <button
+          type="button"
+          className="map-bulk-favorite-button"
+          disabled={newFavoriteCount === 0}
+          onClick={() => onAddFavorites?.(works)}
+        >
+          ★ Add room
+          <span>{newFavoriteCount === 0 ? 'All saved' : `${newFavoriteCount} new`}</span>
+        </button>
       </div>
       {works.map((work) => (
         <ArtworkListItem
@@ -1310,16 +1302,37 @@ function ArtworkList({ room, selectedArtworkId, isFavorite, onToggleFavorite, on
   );
 }
 
-function GalleryMap({ target, isFavorite, onToggleFavorite }) {
+function GalleryMap({ target, isFavorite, onToggleFavorite, onAddFavorites }) {
   const [activeFloor, setActiveFloor] = useState('1');
   const [selectedDept, setSelectedDept] = useState(null);
   const [room, setRoom] = useState(null);
   const [selectedArtworkId, setSelectedArtworkId] = useState(null);
 
-  // 실제 작품이 있는 갤러리(방)만 클릭/하이라이트 대상이 된다.
+  // 작품-부서 매칭은 CSV의 Department가 아니라 "갤러리 번호가 현재 보고 있는
+  // 층·부서의 방 지도에 들어있는지"로 판정한다. CSV는 유럽 회화를 한 부서로 묶지만
+  // 도면은 시대별로 쪼개져 있어(600번대 vs 800번대) 부서명 매칭은 깨진다.
+  const roomGalleries = useMemo(
+    () => (selectedDept ? getRoomGalleries(activeFloor, selectedDept) : new Set()),
+    [activeFloor, selectedDept],
+  );
+  const selectedDeptWorks = useMemo(
+    () => (selectedDept ? allArtworks.filter((work) => roomGalleries.has(String(work.galleryNumber))) : []),
+    [selectedDept, roomGalleries],
+  );
+
+  // 현재 층의 부서별 작품 수 (갤러리 기준). 작품 없는 부서는 개요 도면에서 흐리게 처리한다.
+  const floorDeptCounts = useMemo(() => {
+    const floor = floorplanFloors.find((item) => item.id === activeFloor);
+    if (!floor) return {};
+    return floor.departments.reduce((counts, dept) => {
+      const galleries = getRoomGalleries(activeFloor, dept.department);
+      counts[dept.department] = allArtworks.filter((work) => galleries.has(String(work.galleryNumber))).length;
+      return counts;
+    }, {});
+  }, [activeFloor]);
   const galleriesWithWorks = useMemo(
-    () => new Set(Object.keys(galleryArtworks).filter((gallery) => (galleryArtworks[gallery] || []).length > 0)),
-    [],
+    () => new Set(selectedDeptWorks.map((work) => String(work.galleryNumber))),
+    [selectedDeptWorks],
   );
 
   useEffect(() => {
@@ -1345,6 +1358,11 @@ function GalleryMap({ target, isFavorite, onToggleFavorite }) {
 
   const floorMeta = floorplanFloors.find((item) => item.id === activeFloor);
   const roomSvg = selectedDept ? getRoomMapSvg(activeFloor, selectedDept) : null;
+  const selectedDeptNewFavoriteCount = selectedDeptWorks.filter((work) => !isFavorite?.(work.id)).length;
+  const selectedRoomWorks = useMemo(
+    () => (room ? selectedDeptWorks.filter((work) => String(work.galleryNumber) === String(room)) : []),
+    [room, selectedDeptWorks],
+  );
 
   return (
     <>
@@ -1357,11 +1375,30 @@ function GalleryMap({ target, isFavorite, onToggleFavorite }) {
             title={floorMeta?.label || 'Floor Overview'}
             headerExtra={selectedDept || `${floorMeta?.departments.length || 0} departments`}
           >
-            <DepartmentFloorMap floor={activeFloor} selectedDept={selectedDept} onSelectDept={chooseDept} />
+            <DepartmentFloorMap
+              floor={activeFloor}
+              selectedDept={selectedDept}
+              onSelectDept={chooseDept}
+              deptCounts={floorDeptCounts}
+              dimInactive
+            />
           </ChartPanel>
         )}
         {selectedDept && (
-          <ChartPanel title={selectedDept} headerExtra={roomSvg ? 'Rooms' : 'No room map'}>
+          <ChartPanel
+            title={selectedDept}
+            headerExtra={(
+              <button
+                type="button"
+                className="map-bulk-favorite-button"
+                disabled={selectedDeptNewFavoriteCount === 0}
+                onClick={() => onAddFavorites?.(selectedDeptWorks)}
+              >
+                ★ Add department
+                <span>{selectedDeptNewFavoriteCount === 0 ? 'All saved' : `${selectedDeptNewFavoriteCount} new`}</span>
+              </button>
+            )}
+          >
             {roomSvg ? (
               <RoomDetailMap
                 svg={roomSvg}
@@ -1383,6 +1420,8 @@ function GalleryMap({ target, isFavorite, onToggleFavorite }) {
             selectedArtworkId={selectedArtworkId}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
+            onAddFavorites={onAddFavorites}
+            worksOverride={selectedRoomWorks}
             onBack={() => {
               setRoom(null);
               setSelectedArtworkId(null);
@@ -1397,10 +1436,11 @@ function GalleryMap({ target, isFavorite, onToggleFavorite }) {
 function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onToggleFavorite, onClearFavorites }) {
   const [showFavoriteMap, setShowFavoriteMap] = useState(false);
   const [selectedFavoriteDepts, setSelectedFavoriteDepts] = useState([]);
+  const [selectedFavoriteFloor, setSelectedFavoriteFloor] = useState('1');
 
   const favoriteDeptCounts = useMemo(() => {
     return favorites.reduce((counts, artwork) => {
-      const resolvedDept = resolveDepartment(artwork.department);
+      const resolvedDept = artworkDepartment(artwork);
       if (!resolvedDept) return counts;
       counts[resolvedDept] = (counts[resolvedDept] || 0) + 1;
       return counts;
@@ -1416,7 +1456,7 @@ function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onTog
     if (selectedFavoriteDeptSet.size === 0) return favorites;
 
     return favorites.filter((artwork) => {
-      const resolvedDept = resolveDepartment(artwork.department);
+      const resolvedDept = artworkDepartment(artwork);
       return selectedFavoriteDeptSet.has(resolvedDept);
     });
   }, [favorites, selectedFavoriteDeptSet]);
@@ -1429,6 +1469,7 @@ function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onTog
     if (favorites.length === 0) {
       setShowFavoriteMap(false);
       setSelectedFavoriteDepts([]);
+      setSelectedFavoriteFloor('1');
     }
   }, [favorites.length]);
 
@@ -1445,7 +1486,13 @@ function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onTog
   const hideFavoriteMap = () => {
     setShowFavoriteMap(false);
     setSelectedFavoriteDepts([]);
+    setSelectedFavoriteFloor('1');
   };
+
+  const favoriteFloorMeta = floorplanFloors.find((floor) => floor.id === selectedFavoriteFloor) || floorplanFloors[0];
+  const selectedFavoriteFloorCount = favoriteFloorMeta
+    ? favoriteFloorMeta.departments.reduce((sum, dept) => sum + (favoriteDeptCounts[dept.department] || 0), 0)
+    : 0;
 
   const mapSummary = selectedFavoriteDepts.length > 0
     ? `${visibleFavorites.length} shown from ${selectedFavoriteDepts.length} selected departments`
@@ -1533,25 +1580,40 @@ function FavoritesPage({ favorites, onJumpTimeline, onJumpMap, isFavorite, onTog
                   </div>
                   <button type="button" onClick={hideFavoriteMap}>Hide map</button>
                 </div>
-                <div className="favorite-map-floors">
-                  {floorplanFloors.map((floor) => (
-                    <div className="favorite-floor-card" key={floor.id}>
-                      <div className="favorite-floor-title">
+                <div className="favorite-floor-tabs" role="tablist" aria-label="Favorite map floor selector">
+                  {floorplanFloors.map((floor) => {
+                    const floorCount = floor.departments.reduce((sum, dept) => sum + (favoriteDeptCounts[dept.department] || 0), 0);
+                    return (
+                      <button
+                        type="button"
+                        key={floor.id}
+                        className={selectedFavoriteFloor === floor.id ? 'active' : ''}
+                        onClick={() => setSelectedFavoriteFloor(floor.id)}
+                      >
                         <strong>{floor.label}</strong>
-                        <span>
-                          {floor.departments.reduce((sum, dept) => sum + (favoriteDeptCounts[dept.department] || 0), 0)} works
-                        </span>
+                        <span>{floorCount} works</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="favorite-map-floors">
+                  {favoriteFloorMeta && (
+                    <div className="favorite-floor-card" key={favoriteFloorMeta.id}>
+                      <div className="favorite-floor-title">
+                        <strong>{favoriteFloorMeta.label}</strong>
+                        <span>{selectedFavoriteFloorCount} works</span>
                       </div>
                       <DepartmentFloorMap
-                        floor={floor.id}
+                        floor={favoriteFloorMeta.id}
                         selectedDept={selectedFavoriteDepts}
                         onSelectDept={toggleFavoriteDept}
                         deptCounts={favoriteDeptCounts}
                         dimInactive
                         showCounts
+                        className="favorite-floorplan-svg"
                       />
                     </div>
-                  ))}
+                  )}
                 </div>
               </aside>
             )}
@@ -1677,6 +1739,7 @@ export default function App() {
             target={galleryTarget}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
+            onAddFavorites={addFavorites}
           />
         )}
         {activeTab === 'favorites' && (

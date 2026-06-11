@@ -2253,379 +2253,61 @@ a {
   }
 }
 
-/* Final requested patch: timeline readability, cluster grid, and map bulk favorite */
-.timeline-layout.has-detail {
-  grid-template-columns: minmax(0, 1fr) minmax(500px, 0.58fr);
-}
-
-.timeline-layout.has-detail .chart-panel {
-  padding-left: 22px;
-}
-
-.timeline-layout.has-detail .scatter-svg .category-label-button .category-label,
-.scatter-svg .category-label-button .category-label {
-  font-size: 21px;
-  font-weight: 900;
-  letter-spacing: 0.01em;
-}
-
-.timeline-layout.has-detail .scatter-svg .axis-title,
-.scatter-svg .axis-title {
-  font-size: 22px;
-  font-weight: 900;
-}
-
-.timeline-layout.has-detail .scatter-svg g:first-of-type text:not(.category-label),
-.timeline-layout.has-detail .scatter-svg text:not(.category-label):not(.bubble-count),
-.scatter-svg g:first-of-type text:not(.category-label),
-.scatter-svg text:not(.category-label):not(.bubble-count) {
-  font-size: 17px;
-  font-weight: 800;
-}
-
-.timeline-layout.has-detail .scatter-svg .bubble-count,
-.scatter-svg .bubble-count {
-  font-size: 16px;
-  font-weight: 950;
-}
-
-.timeline-layout.has-detail .scatter-svg .category-label-hitbox {
-  height: 42px;
-}
-
-.timeline-cluster-list {
-  max-height: calc(100vh - 136px);
-  overflow: auto;
-}
-
-.timeline-cluster-head {
-  align-items: flex-start;
-  padding-right: 36px;
-}
-
-.timeline-cluster-head .cluster-meta {
-  margin: 4px 0 0;
-}
-
-.cluster-add-favorites-button,
-.map-bulk-favorite-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 13px;
-  border: 1px solid rgba(237, 0, 43, 0.72);
-  border-radius: 999px;
-  background: rgba(237, 0, 43, 0.16);
-  color: #ffffff;
-  font-size: 0.78rem;
-  font-weight: 900;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.cluster-add-favorites-button {
-  width: 100%;
-  margin: 4px 0 14px;
-}
-
-.cluster-add-favorites-button span,
-.map-bulk-favorite-button span {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.cluster-add-favorites-button:hover:not(:disabled),
-.map-bulk-favorite-button:hover:not(:disabled) {
-  border-color: #ffffff;
-  background: rgba(237, 0, 43, 0.28);
-  box-shadow: 0 0 16px rgba(237, 0, 43, 0.34);
-  transform: translateY(-1px);
-}
-
-.cluster-add-favorites-button:disabled,
-.map-bulk-favorite-button:disabled {
-  cursor: default;
-  opacity: 0.48;
-}
-
-.timeline-cluster-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 12px;
-}
-
+/* Timeline right-side artwork cards: show details on card hover like map view.
+   Scope is limited to the timeline cluster list only. */
 .timeline-cluster-grid .art-list-item {
-  grid-template-columns: 1fr;
-  gap: 8px;
-  margin-bottom: 0;
-  padding: 10px;
+  overflow: hidden;
+}
+
+.timeline-cluster-grid .art-item-details {
+  display: block !important;
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  overflow: hidden;
+  transition: max-height 220ms ease, opacity 220ms ease, margin-top 220ms ease;
 }
 
 .timeline-cluster-grid .art-list-item:hover,
 .timeline-cluster-grid .art-list-item.selected {
-  grid-template-columns: 1fr;
-  transform: translateY(-2px);
+  z-index: 6;
+  border-color: var(--red);
+  box-shadow: 0 0 18px rgba(237, 0, 43, 0.32);
 }
 
-.timeline-cluster-grid .art-list-item img,
-.timeline-cluster-grid .art-list-item:hover img,
-.timeline-cluster-grid .art-list-item.selected img {
-  aspect-ratio: 4 / 3;
-  max-height: 150px;
+.timeline-cluster-grid .art-list-item:hover .art-item-details,
+.timeline-cluster-grid .art-list-item.selected .art-item-details {
+  max-height: 220px;
+  opacity: 1;
+  margin-top: 5px;
 }
 
-.timeline-cluster-grid .art-list-item h3 {
-  font-size: 14px;
+.timeline-cluster-grid .art-item-details small {
+  display: block;
+  margin: 1px 0;
+  font-size: 9px !important;
   line-height: 1.18;
 }
 
-.timeline-cluster-grid .art-list-item p,
-.timeline-cluster-grid .art-list-item span,
-.timeline-cluster-grid .art-list-item small {
-  font-size: 11px;
+.timeline-cluster-grid .art-item-details .art-item-label {
+  display: inline;
+  color: var(--text);
+  font-weight: 800;
 }
 
-.timeline-cluster-grid .artwork-favorite-button {
-  top: -2px;
-  right: -2px;
-}
-
-.map-list-head {
-  align-items: flex-start;
-}
-
-.floorplan-dept-label {
-  font-size: 17px;
-  font-weight: 950;
-  stroke-width: 4.2px;
-}
-
-.floorplan-dept-count {
-  font-size: 20px;
-  font-weight: 950;
-  stroke-width: 4.4px;
-}
-
-.room-detail-map .room text {
-  font-size: 15px;
-  font-weight: 900;
-  paint-order: stroke;
-  stroke: rgba(6, 12, 16, 0.86);
-  stroke-width: 2.2px;
-  stroke-linejoin: round;
-}
-
-@media (max-width: 1180px) {
-  .timeline-layout.has-detail {
-    grid-template-columns: 1fr;
-  }
-
-  .timeline-cluster-list {
-    max-height: none;
-  }
-}
-
-@media (max-width: 720px) {
-  .timeline-cluster-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .floorplan-dept-label {
-    font-size: 14px;
-  }
-
-  .room-detail-map .room text {
-    font-size: 13px;
-  }
+.timeline-cluster-grid .art-list-item a {
+  display: inline-flex !important;
+  width: fit-content;
+  min-height: 24px;
+  margin-top: 4px;
+  padding: 0 9px;
+  font-size: 9px !important;
 }
 
 
-/* Final fix: keep empty rooms dark after bulk favorite + stronger map/timeline readability */
-.favorite-floor-card .favorite-floorplan-svg {
-  height: clamp(580px, 72vh, 860px);
-  min-height: 580px;
-}
-
-.favorite-floor-card .favorite-floorplan-svg .floorplan-dept-label,
-.floorplan-dept-label {
-  font-size: 24px;
-  font-weight: 950;
-  stroke-width: 5.8px;
-}
-
-.favorite-floor-card .favorite-floorplan-svg .floorplan-dept-count,
-.floorplan-dept-count {
-  font-size: 30px;
-  font-weight: 950;
-  stroke-width: 6px;
-}
-
-.room-detail-map .room text {
-  font-size: 19px;
-  font-weight: 950;
-  paint-order: stroke;
-  stroke: rgba(6, 12, 16, 0.9);
-  stroke-width: 3px;
-  stroke-linejoin: round;
-}
-
-/* Empty rooms must stay visually dark even after favorites are added. */
-.room-detail-map .room.empty,
-.room-detail-map .room.empty.selected,
-.room-detail-map .room.empty.has-works {
-  opacity: 0.25;
-  cursor: default;
-}
-
-.room-detail-map .room.empty rect,
-.room-detail-map .room.empty.selected rect,
-.room-detail-map .room.empty.has-works rect {
-  fill-opacity: 0.08;
-  stroke-width: 1.2;
-  filter: none;
-}
-
-.room-detail-map .room.empty text,
-.room-detail-map .room.empty.selected text,
-.room-detail-map .room.empty.has-works text {
-  fill: rgba(238, 244, 246, 0.45);
-}
-
-.favorite-floor-tabs button {
-  min-height: 72px;
-  padding: 14px 18px;
-}
-
-.favorite-floor-tabs strong {
-  font-size: 1.18rem;
-}
-
-.favorite-floor-tabs span {
-  font-size: 0.96rem;
-}
-
-/* Timeline label readability when the detail panel shrinks the chart. */
-.timeline-layout.has-detail .scatter-svg .category-label-button .category-label,
-.scatter-svg .category-label-button .category-label {
-  font-size: 25px;
-  font-weight: 950;
-}
-
-.timeline-layout.has-detail .scatter-svg .axis-title,
-.scatter-svg .axis-title {
-  font-size: 26px;
-  font-weight: 950;
-}
-
-.timeline-layout.has-detail .scatter-svg g:first-of-type text:not(.category-label),
-.timeline-layout.has-detail .scatter-svg text:not(.category-label):not(.bubble-count),
-.scatter-svg g:first-of-type text:not(.category-label),
-.scatter-svg text:not(.category-label):not(.bubble-count) {
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.timeline-layout.has-detail .scatter-svg .bubble-count,
-.scatter-svg .bubble-count {
-  font-size: 19px;
-  font-weight: 950;
-}
-
-.scatter-svg .category-label-hitbox {
-  height: 48px;
-}
-
-@media (max-width: 720px) {
-  .favorite-floor-card .favorite-floorplan-svg {
-    height: 460px;
-    min-height: 460px;
-  }
-
-  .favorite-floor-card .favorite-floorplan-svg .floorplan-dept-label,
-  .floorplan-dept-label {
-    font-size: 19px;
-  }
-
-  .favorite-floor-card .favorite-floorplan-svg .floorplan-dept-count,
-  .floorplan-dept-count {
-    font-size: 24px;
-  }
-
-  .room-detail-map .room text {
-    font-size: 15px;
-  }
-}
-
-/* Final adjustment patch: map text rollback + timeline compact detail view */
-/* 1) Roll map labels back from the oversized level while keeping readability. */
-.favorite-floor-card .favorite-floorplan-svg {
-  height: clamp(540px, 68vh, 820px);
-  min-height: 540px;
-}
-
-.favorite-floor-tabs button {
-  min-height: 66px;
-  padding: 13px 16px;
-}
-
-.favorite-floor-tabs strong {
-  font-size: 1.1rem;
-}
-
-.favorite-floor-tabs span {
-  font-size: 0.9rem;
-}
-
-.favorite-floor-card .favorite-floorplan-svg .floorplan-dept-label,
-.floorplan-dept-label {
-  font-size: 17px !important;
-  font-weight: 900;
-  stroke-width: 4.2px !important;
-}
-
-.favorite-floor-card .favorite-floorplan-svg .floorplan-dept-count,
-.floorplan-dept-count {
-  font-size: 20px !important;
-  font-weight: 900;
-  stroke-width: 4.4px !important;
-}
-
-.room-detail-map .room text {
-  font-size: 15px !important;
-  font-weight: 900;
-  stroke-width: 2.2px !important;
-}
-
-/* 2) Only when the timeline chart is squeezed by the right detail panel, enlarge labels strongly. */
-.timeline-layout.has-detail .scatter-svg .category-label-button .category-label {
-  font-size: 30px !important;
-  font-weight: 950 !important;
-}
-
-.timeline-layout.has-detail .scatter-svg .axis-title {
-  font-size: 30px !important;
-  font-weight: 950 !important;
-}
-
-.timeline-layout.has-detail .scatter-svg g:first-of-type text:not(.category-label),
-.timeline-layout.has-detail .scatter-svg text:not(.category-label):not(.bubble-count) {
-  font-size: 23px !important;
-  font-weight: 900 !important;
-}
-
-.timeline-layout.has-detail .scatter-svg .bubble-count {
-  font-size: 22px !important;
-  font-weight: 950 !important;
-}
-
-.timeline-layout.has-detail .scatter-svg .category-label-hitbox {
-  height: 52px;
-}
-
-/* 3) Make the right-side cluster list compact enough that about 8 works fit without scrolling. */
+/* Restore timeline selected-work panel to compact 2-column grid.
+   Keeps the hover detail behavior, but prevents the cards from falling back
+   into the one-column artwork list layout. */
 .timeline-layout.has-detail {
   grid-template-columns: minmax(0, 1fr) minmax(430px, 0.5fr);
 }
@@ -2636,45 +2318,38 @@ a {
   overflow: visible !important;
 }
 
-.timeline-cluster-head {
+.timeline-cluster-list > .panel-head {
   margin-bottom: 6px;
   padding-right: 34px;
 }
 
-.timeline-cluster-head h2 {
+.timeline-cluster-list > .panel-head h2 {
   font-size: 13px;
 }
 
-.timeline-cluster-head .cluster-meta {
-  margin: 2px 0 0;
+.timeline-cluster-list .cluster-meta {
+  margin: 2px 0 8px;
   font-size: 10px;
   line-height: 1.25;
 }
 
-.cluster-add-favorites-button {
-  min-height: 28px;
-  margin: 2px 0 8px;
-  padding: 0 10px;
-  font-size: 0.68rem;
-}
-
-.cluster-add-favorites-button span {
-  font-size: 0.62rem;
-}
-
 .timeline-cluster-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 7px !important;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
 }
 
 .timeline-cluster-grid .art-list-item,
 .timeline-cluster-grid .art-list-item:hover,
 .timeline-cluster-grid .art-list-item.selected {
+  position: relative;
+  display: grid;
   grid-template-columns: 72px minmax(0, 1fr) !important;
   gap: 7px !important;
   min-height: 82px;
   margin-bottom: 0 !important;
   padding: 6px !important;
+  overflow: visible;
   transform: none !important;
 }
 
@@ -2689,6 +2364,7 @@ a {
 }
 
 .timeline-cluster-grid .art-list-item-content {
+  min-width: 0;
   padding-right: 28px;
 }
 
@@ -2710,10 +2386,6 @@ a {
   line-height: 1.12;
 }
 
-.timeline-cluster-grid .art-item-details {
-  display: none !important;
-}
-
 .timeline-cluster-grid .artwork-favorite-button {
   top: -1px;
   right: -1px;
@@ -2722,8 +2394,54 @@ a {
   font-size: 15px;
 }
 
+/* Hover details appear over the compact grid instead of expanding each card
+   into a long one-column list. */
+.timeline-cluster-grid .art-item-details {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: calc(100% - 4px);
+  z-index: 20;
+  display: block !important;
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid rgba(237, 0, 43, 0.34);
+  border-radius: 7px;
+  background: rgba(5, 14, 21, 0.98);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.42), 0 0 16px rgba(237, 0, 43, 0.16);
+  transition: max-height 180ms ease, opacity 180ms ease, padding 180ms ease;
+}
+
+.timeline-cluster-grid .art-list-item:hover .art-item-details,
+.timeline-cluster-grid .art-list-item.selected .art-item-details {
+  max-height: 220px;
+  opacity: 1;
+  padding: 7px 8px;
+}
+
+.timeline-cluster-grid .art-item-details small {
+  display: block;
+  margin: 1px 0;
+  font-size: 9px !important;
+  line-height: 1.18;
+}
+
+.timeline-cluster-grid .art-item-details .art-item-label {
+  display: inline;
+  color: var(--text);
+  font-weight: 800;
+}
+
 .timeline-cluster-grid .art-list-item a {
-  display: none;
+  display: inline-flex !important;
+  width: fit-content;
+  min-height: 24px;
+  margin-top: 4px;
+  padding: 0 9px;
+  font-size: 9px !important;
 }
 
 @media (max-width: 1180px) {
@@ -2737,107 +2455,224 @@ a {
 }
 
 @media (max-width: 720px) {
-  .favorite-floor-card .favorite-floorplan-svg {
-    height: 430px;
-    min-height: 430px;
-  }
-
-  .favorite-floor-card .favorite-floorplan-svg .floorplan-dept-label,
-  .floorplan-dept-label {
-    font-size: 14px !important;
-  }
-
-  .favorite-floor-card .favorite-floorplan-svg .floorplan-dept-count,
-  .floorplan-dept-count {
-    font-size: 18px !important;
-  }
-
-  .room-detail-map .room text {
-    font-size: 13px !important;
-  }
-
   .timeline-cluster-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 }
 
-/* Favorite map floor selector final design patch
-   Scope: favorite map floor tabs only. No gallery/timeline/map logic changes. */
-.favorite-map-panel .favorite-floor-tabs {
+/* Timeline hover detail card patch
+   Scope: timeline right-side selected-work list only.
+   Keeps the default 2x4 compact grid, and shows a large map-style detail card on hover. */
+.timeline-cluster-list {
+  position: relative;
+}
+
+.timeline-hover-detail-card {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 56px;
+  z-index: 60;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 0 0 14px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.035);
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 300px;
+  padding: 14px;
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  background: rgba(5, 14, 21, 0.985);
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.62), 0 0 22px rgba(237, 0, 43, 0.22);
 }
 
-.favorite-map-panel .favorite-floor-tabs button {
-  min-height: 58px !important;
-  padding: 10px 14px !important;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.045);
-  color: #ffffff;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: none;
+.timeline-hover-detail-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  align-self: start;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-.favorite-map-panel .favorite-floor-tabs button:hover {
-  border-color: rgba(237, 0, 43, 0.7);
-  background: rgba(237, 0, 43, 0.11);
-  box-shadow: 0 0 14px rgba(237, 0, 43, 0.2);
-  transform: translateY(-1px);
+.timeline-hover-detail-content {
+  position: relative;
+  min-width: 0;
+  padding-right: 42px;
 }
 
-.favorite-map-panel .favorite-floor-tabs button.active {
-  border-color: var(--red);
-  background: linear-gradient(135deg, rgba(237, 0, 43, 0.28), rgba(237, 0, 43, 0.1));
-  box-shadow: 0 0 18px rgba(237, 0, 43, 0.28), inset 0 0 16px rgba(255, 255, 255, 0.035);
-}
-
-.favorite-map-panel .favorite-floor-tabs strong {
-  display: block;
-  color: #ffffff;
-  font-size: 0.9rem !important;
+.timeline-hover-detail-content h3 {
+  margin: 0 0 6px;
+  color: #f4f7f8;
+  font-size: 20px;
+  line-height: 1.16;
   font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  line-height: 1.05;
 }
 
-.favorite-map-panel .favorite-floor-tabs span {
+.timeline-hover-detail-content p,
+.timeline-hover-detail-content small {
   display: block;
-  margin-top: 5px;
-  color: rgba(220, 229, 236, 0.76);
-  font-size: 0.76rem !important;
-  font-weight: 800;
-  line-height: 1.1;
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.28;
 }
 
-.favorite-map-panel .favorite-floor-tabs button.active span {
-  color: #ffd6dc;
+.timeline-hover-detail-content .art-item-label {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.timeline-hover-detail-fields {
+  margin-top: 10px;
+}
+
+.timeline-hover-detail-content a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-top: 12px;
+  padding: 0 18px;
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  color: white;
+  text-decoration: none;
+  background: rgba(237, 0, 43, 0.16);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.timeline-hover-detail-content a:hover {
+  box-shadow: 0 0 18px var(--red-glow);
+}
+
+.timeline-hover-favorite-button {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+}
+
+/* Do not expand each compact grid card itself; the large hover card above carries the details. */
+.timeline-cluster-grid .art-item-details {
+  display: none !important;
+}
+
+.timeline-cluster-grid .art-list-item:hover,
+.timeline-cluster-grid .art-list-item.selected {
+  z-index: 6;
+  border-color: var(--red);
+  box-shadow: 0 0 16px rgba(237, 0, 43, 0.32);
+  transform: none !important;
+}
+
+@media (max-width: 1180px) {
+  .timeline-hover-detail-card {
+    position: sticky;
+    top: 10px;
+    left: auto;
+    right: auto;
+    margin-bottom: 10px;
+  }
 }
 
 @media (max-width: 720px) {
-  .favorite-map-panel .favorite-floor-tabs {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+  .timeline-hover-detail-card {
+    grid-template-columns: 118px minmax(0, 1fr);
+    min-height: 0;
+    padding: 10px;
   }
 
-  .favorite-map-panel .favorite-floor-tabs button {
-    min-height: 52px !important;
-    padding: 9px 11px !important;
+  .timeline-hover-detail-content h3 {
+    font-size: 14px;
   }
 
-  .favorite-map-panel .favorite-floor-tabs strong {
-    font-size: 0.82rem !important;
+  .timeline-hover-detail-content p,
+  .timeline-hover-detail-content small {
+    font-size: 11px;
   }
 
-  .favorite-map-panel .favorite-floor-tabs span {
-    font-size: 0.7rem !important;
+  .timeline-hover-detail-content a {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
+
+/* Final adjustment: make timeline hover detail card smaller so it does not cover the whole 2x4 grid. */
+.timeline-hover-detail-card {
+  left: 14px !important;
+  right: auto !important;
+  top: 46px !important;
+  width: min(360px, calc(100% - 28px)) !important;
+  grid-template-columns: 118px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+  max-height: 230px !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.58), 0 0 16px rgba(237, 0, 43, 0.2) !important;
+}
+
+.timeline-hover-detail-card img {
+  max-height: 96px !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+.timeline-hover-detail-content {
+  padding-right: 30px !important;
+}
+
+.timeline-hover-detail-content h3 {
+  margin-bottom: 3px !important;
+  font-size: 13px !important;
+  line-height: 1.12 !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.timeline-hover-detail-content p,
+.timeline-hover-detail-content small {
+  margin: 1px 0 !important;
+  font-size: 10px !important;
+  line-height: 1.16 !important;
+}
+
+.timeline-hover-detail-fields {
+  margin-top: 4px !important;
+}
+
+.timeline-hover-detail-fields small:nth-of-type(n+4) {
+  display: none !important;
+}
+
+.timeline-hover-detail-content a {
+  min-height: 26px !important;
+  margin-top: 6px !important;
+  padding: 0 10px !important;
+  font-size: 10px !important;
+}
+
+.timeline-hover-favorite-button {
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 16px !important;
+}
+
+@media (max-width: 720px) {
+  .timeline-hover-detail-card {
+    width: min(330px, calc(100% - 20px)) !important;
+    left: 10px !important;
+    top: 42px !important;
+    grid-template-columns: 96px minmax(0, 1fr) !important;
+  }
+
+  .timeline-hover-detail-card img {
+    max-height: 82px !important;
   }
 }
